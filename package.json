@@ -17,7 +17,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,scss}\""
   },
-  "keywords": ["kubernetes", "k8s", "debugger", "electron"],
+  "keywords": ["kubernetes", "k8s", "debugger", "electron", "observability", "devops", "sre", "monitoring", "incident-response", "kubectl", "multi-cluster", "helm", "desktop-app"],
   "author": "Emmanuel Kimaswa <kimaswaemma36@gmail.com>",
   "license": "MIT",
   "type": "commonjs",
