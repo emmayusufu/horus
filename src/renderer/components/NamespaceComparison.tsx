@@ -51,6 +51,7 @@ export function NamespaceComparison({ resources }: NamespaceComparisonProps) {
               fontSize: 12
             }}
             itemStyle={{ color: 'var(--text-primary)' }}
+            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-muted)' }} />
           <Bar dataKey="healthy" stackId="a" fill="#3d9a5f" radius={[0, 0, 0, 0]} barSize={14} name="Healthy" />
