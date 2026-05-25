@@ -133,13 +133,21 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
           />
           <Column
             name="Status"
-            cellRenderer={(row) => (
-              <Cell>
-                <div className="explore-cell" onClick={() => onSelectResource(filtered[row])}>
-                  {filtered[row]?.status}
-                </div>
-              </Cell>
-            )}
+            cellRenderer={(row) => {
+              const r = filtered[row]
+              const color = r?.health === 'critical' ? '#E76A6E' : r?.health === 'warning' ? '#D4A017' : undefined
+              return (
+                <Cell>
+                  <div
+                    className="explore-cell"
+                    onClick={() => onSelectResource(r)}
+                    style={color ? { color } : undefined}
+                  >
+                    {r?.status}
+                  </div>
+                </Cell>
+              )
+            }}
           />
           <Column
             name="Restarts"

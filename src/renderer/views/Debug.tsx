@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Button, Tag, Intent, Spinner } from '@blueprintjs/core'
+import { Button, Tag, Intent, Card, H5 } from '@blueprintjs/core'
 import { Timeline } from '../components/Timeline'
 import { LogViewer } from '../components/LogViewer'
 import { ResourceUsage } from '../components/ResourceUsage'
@@ -51,7 +51,7 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
     }
   }, [detail !== null, resource.uid])
 
-  if (loading) return <Spinner style={{ margin: 40 }} />
+  if (loading) return <DebugSkeleton />
   if (error) return <div style={{ padding: 16, color: 'red' }}>{error}</div>
   if (!detail) return null
 
@@ -60,7 +60,13 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
   }
 
   const healthIntent =
-    resource.health === 'critical' ? Intent.DANGER : resource.health === 'warning' ? Intent.WARNING : Intent.SUCCESS
+    resource.health === 'critical'
+      ? Intent.DANGER
+      : resource.health === 'warning'
+        ? Intent.WARNING
+        : resource.health === 'healthy'
+          ? Intent.SUCCESS
+          : Intent.NONE
 
   return (
     <div className="debug-page">
@@ -133,6 +139,64 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
           {resource.kind === 'Pod' && (
             <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DebugSkeleton() {
+  const bar = (w: string) => <div className="bp5-skeleton" style={{ height: 14, width: w, borderRadius: 4 }} />
+  return (
+    <div className="debug-page">
+      <div className="debug-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {bar('60px')}
+          {bar('200px')}
+        </div>
+      </div>
+      <div className="debug-meta">
+        {bar('80px')}
+        {bar('60px')}
+        {bar('120px')}
+        {bar('100px')}
+      </div>
+      <div className="debug-columns">
+        <div className="debug-sidebar">
+          <Card style={{ marginBottom: 12 }}>
+            <H5>{bar('100px')}</H5>
+            {bar('100%')}
+            <br />
+            {bar('80%')}
+          </Card>
+          <Card style={{ marginBottom: 12 }}>
+            <H5>{bar('80px')}</H5>
+            {bar('100%')}
+            <br />
+            {bar('60%')}
+          </Card>
+        </div>
+        <div className="debug-main">
+          <Card style={{ marginBottom: 12 }}>
+            <H5>{bar('80px')}</H5>
+            {bar('100%')}
+            <br />
+            {bar('90%')}
+            <br />
+            {bar('70%')}
+          </Card>
+          <Card style={{ marginBottom: 12 }}>
+            <H5>{bar('60px')}</H5>
+            <div style={{ height: 120 }}>
+              {bar('100%')}
+              <br />
+              {bar('100%')}
+              <br />
+              {bar('80%')}
+              <br />
+              {bar('60%')}
+            </div>
+          </Card>
         </div>
       </div>
     </div>
