@@ -758,3 +758,70 @@ body.horus-dark {
   gap: 8px;
   padding: 10px;
 }
+
+.diff-container {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.diff-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.diff-header-label {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  &:first-child {
+    border-right: 1px solid var(--border);
+  }
+}
+
+.diff-body {
+  max-height: 600px;
+  overflow: auto;
+}
+
+.diff-row {
+  display: flex;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.diff-cell {
+  flex: 1;
+  padding: 0 8px;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.diff-divider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.diff-row-changed {
+  background: rgba(204, 141, 53, 0.06);
+}
+
+.diff-changed {
+  color: #cc8d35;
+}
+
+.diff-added {
+  color: #3d9a5f;
+  background: rgba(61, 154, 95, 0.08);
+}
+
+.diff-removed {
+  color: #e5564f;
+  background: rgba(229, 86, 79, 0.08);
+}
