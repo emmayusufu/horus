@@ -1,7 +1,9 @@
 import { Card, H5, Tag, Intent } from '@blueprintjs/core'
 import type { PodCondition } from '../../shared/types'
 
-interface PodConditionsProps { conditions: PodCondition[] }
+interface PodConditionsProps {
+  conditions: PodCondition[]
+}
 
 export function PodConditions({ conditions }: PodConditionsProps) {
   if (conditions.length === 0) return null
@@ -18,7 +20,8 @@ export function PodConditions({ conditions }: PodConditionsProps) {
             intent={c.status === 'True' ? Intent.SUCCESS : c.status === 'False' ? Intent.WARNING : Intent.NONE}
             title={c.message || c.reason || ''}
           >
-            {c.type}{c.reason ? ` (${c.reason})` : ''}
+            {c.type}
+            {c.reason ? ` (${c.reason})` : ''}
           </Tag>
         ))}
       </div>

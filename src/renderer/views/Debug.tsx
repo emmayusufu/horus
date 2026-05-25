@@ -26,7 +26,8 @@ export function Debug({ resource, onBack }: DebugProps) {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    k8s.getResourceDetail(resource.cluster, resource.namespace, resource.name, resource.kind)
+    k8s
+      .getResourceDetail(resource.cluster, resource.namespace, resource.name, resource.kind)
       .then(setDetail)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
@@ -38,7 +39,7 @@ export function Debug({ resource, onBack }: DebugProps) {
     intervalRef.current = setInterval(async () => {
       try {
         const events = await k8s.getEvents(resource.cluster, resource.namespace, resource.name)
-        setDetail((prev) => prev ? { ...prev, events } : prev)
+        setDetail((prev) => (prev ? { ...prev, events } : prev))
       } catch {
         // silently skip refresh on error
       }
@@ -53,23 +54,35 @@ export function Debug({ resource, onBack }: DebugProps) {
   if (error) return <div style={{ padding: 16, color: 'red' }}>{error}</div>
   if (!detail) return null
 
-  const handleExport = async () => { await k8s.exportSnapshot(detail) }
+  const handleExport = async () => {
+    await k8s.exportSnapshot(detail)
+  }
 
-  const healthIntent = resource.health === 'critical' ? Intent.DANGER
-    : resource.health === 'warning' ? Intent.WARNING : Intent.SUCCESS
+  const healthIntent =
+    resource.health === 'critical' ? Intent.DANGER : resource.health === 'warning' ? Intent.WARNING : Intent.SUCCESS
 
   return (
     <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Button minimal icon="arrow-left" onClick={onBack} />
-        <span className="monospace" style={{ fontSize: 16 }}>{resource.name}</span>
-        <div style={{ marginLeft: 'auto' }}><Button icon="export" text="Export snapshot" onClick={handleExport} /></div>
+        <span className="monospace" style={{ fontSize: 16 }}>
+          {resource.name}
+        </span>
+        <div style={{ marginLeft: 'auto' }}>
+          <Button icon="export" text="Export snapshot" onClick={handleExport} />
+        </div>
       </div>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
-        <Tag large intent={healthIntent}>{resource.status}</Tag>
+        <Tag large intent={healthIntent}>
+          {resource.status}
+        </Tag>
         <span className="monospace">Restarts: {resource.restarts}</span>
         {resource.node && <span className="monospace">Node: {resource.node}</span>}
-        {resource.ownerKind && <span className="monospace">Owner: {resource.ownerKind}/{resource.ownerName}</span>}
+        {resource.ownerKind && (
+          <span className="monospace">
+            Owner: {resource.ownerKind}/{resource.ownerName}
+          </span>
+        )}
       </div>
       {detail.conditions && detail.conditions.length > 0 && <PodConditions conditions={detail.conditions} />}
       {detail.containers && detail.containers.length > 0 && <ContainerStates containers={detail.containers} />}
@@ -78,7 +91,9 @@ export function Debug({ resource, onBack }: DebugProps) {
       <LogViewer logs={detail.logs} cluster={resource.cluster} namespace={resource.namespace} podName={resource.name} />
       <ResourceUsage {...detail.resources} />
       <RelatedList related={detail.related} />
-      {resource.kind === 'Pod' && <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />}
+      {resource.kind === 'Pod' && (
+        <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
+      )}
     </div>
   )
 }

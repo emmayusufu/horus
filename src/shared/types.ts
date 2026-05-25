@@ -123,7 +123,13 @@ export interface HorusAPI {
   getHelmInfo: (cluster: string, namespace: string, labels: Record<string, string>) => Promise<HelmInfo | null>
   getResourceDetail: (cluster: string, namespace: string, name: string, kind: string) => Promise<ResourceDetail>
   exportSnapshot: (detail: ResourceDetail) => Promise<string>
-  startLogStream: (cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => Promise<string>
+  startLogStream: (
+    cluster: string,
+    namespace: string,
+    pod: string,
+    container: string,
+    timestamps?: boolean
+  ) => Promise<string>
   stopLogStream: (streamId: string) => Promise<void>
   onLogChunk: (callback: (chunk: LogChunk) => void) => () => void
   getPodYaml: (cluster: string, namespace: string, name: string) => Promise<string>

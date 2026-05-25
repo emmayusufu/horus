@@ -7,29 +7,51 @@ import { fetchRelated } from './k8s/related'
 import { fetchPodMetrics, checkMetricsAvailable } from './k8s/metrics'
 import { parseHelmLabels } from '../shared/helm'
 import { generateSnapshot } from './k8s/snapshot'
-import type { ClusterInfo, K8sEvent, ResourceDetail, ResourceUpdate } from '../shared/types'
+import type {
+  ClusterInfo,
+  K8sEvent,
+  PodCondition,
+  ContainerStateInfo,
+  ResourceDetail,
+  ResourceUpdate
+} from '../shared/types'
 import { writeFileSync } from 'fs'
 
-function toContainerStateInfo(
-  cs: { name: string; ready: boolean; state?: { waiting?: { reason?: string }; running?: Record<string, unknown>; terminated?: { reason?: string; exitCode?: number } } },
-  isInit: boolean
-): import('../shared/types').ContainerStateInfo {
-  let state: 'waiting' | 'running' | 'terminated' = 'waiting'
-  let reason: string | undefined
-  let exitCode: number | undefined
-
-  if (cs.state?.running) {
-    state = 'running'
-  } else if (cs.state?.terminated) {
-    state = 'terminated'
-    reason = cs.state.terminated.reason
-    exitCode = cs.state.terminated.exitCode
-  } else if (cs.state?.waiting) {
-    state = 'waiting'
-    reason = cs.state.waiting.reason
+function mapEvent(e: any): K8sEvent {
+  return {
+    timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? '',
+    type: e.type ?? 'Normal',
+    reason: e.reason ?? '',
+    message: e.message ?? '',
+    involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
+    count: e.count ?? 1,
+    source: e.source?.component ?? ''
   }
+}
 
-  return { name: cs.name, state, ready: cs.ready, reason, exitCode, isInit }
+function toContainerStateInfo(
+  cs: {
+    name: string
+    ready: boolean
+    state?: {
+      waiting?: { reason?: string }
+      running?: Record<string, unknown>
+      terminated?: { reason?: string; exitCode?: number }
+    }
+  },
+  isInit: boolean
+): ContainerStateInfo {
+  if (cs.state?.running) return { name: cs.name, state: 'running', ready: cs.ready, isInit }
+  if (cs.state?.terminated)
+    return {
+      name: cs.name,
+      state: 'terminated',
+      ready: cs.ready,
+      reason: cs.state.terminated.reason,
+      exitCode: cs.state.terminated.exitCode,
+      isInit
+    }
+  return { name: cs.name, state: 'waiting', ready: cs.ready, reason: cs.state?.waiting?.reason, isInit }
 }
 
 const cache = new ResourceCache()
@@ -83,9 +105,12 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     cache.clear(context)
   })
 
-  ipcMain.handle('k8s:get-logs', async (_event, cluster: string, namespace: string, pod: string, timestamps?: boolean) => {
-    return fetchLogs(cluster, namespace, pod, timestamps)
-  })
+  ipcMain.handle(
+    'k8s:get-logs',
+    async (_event, cluster: string, namespace: string, pod: string, timestamps?: boolean) => {
+      return fetchLogs(cluster, namespace, pod, timestamps)
+    }
+  )
 
   ipcMain.handle('k8s:get-events', async (_event, cluster: string, namespace: string, name: string) => {
     const client = getClient(cluster)
@@ -94,15 +119,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     const events = await client.coreApi.listNamespacedEvent({ namespace })
     return events.items
       .filter((e) => e.involvedObject?.name === name)
-      .map((e): K8sEvent => ({
-        timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? '',
-        type: e.type ?? 'Normal',
-        reason: e.reason ?? '',
-        message: e.message ?? '',
-        involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
-        count: e.count ?? 1,
-        source: e.source?.component ?? ''
-      }))
+      .map(mapEvent)
       .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
   })
 
@@ -110,75 +127,73 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return fetchRelated(cluster, namespace, name, kind)
   })
 
-  ipcMain.handle('k8s:helm-info', async (_event, _cluster: string, _namespace: string, labels: Record<string, string>) => {
-    return parseHelmLabels(labels)
-  })
-
-  ipcMain.handle('k8s:get-resource-detail', async (_event, cluster: string, namespace: string, name: string, kind: string) => {
-    const resources = cache.getAll(cluster)
-    const resource = resources.find((r) => r.name === name && r.namespace === namespace && r.kind === kind)
-    if (!resource) throw new Error(`Resource not found: ${kind}/${name}`)
-
-    const client = getClient(cluster)
-    if (!client) throw new Error(`Not connected to ${cluster}`)
-
-    const eventsResult = await client.coreApi.listNamespacedEvent({ namespace })
-    const filteredEvents: K8sEvent[] = eventsResult.items
-      .filter((e) => e.involvedObject?.name === name)
-      .map((e) => ({
-        timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? '',
-        type: e.type ?? 'Normal',
-        reason: e.reason ?? '',
-        message: e.message ?? '',
-        involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
-        count: e.count ?? 1,
-        source: e.source?.component ?? ''
-      }))
-      .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
-
-    const [logs, related, metrics] = await Promise.all([
-      kind === 'Pod' ? fetchLogs(cluster, namespace, name) : Promise.resolve([]),
-      fetchRelated(cluster, namespace, name, kind),
-      kind === 'Pod' ? fetchPodMetrics(cluster, namespace, name) : Promise.resolve(null)
-    ])
-
-    let conditions: import('../shared/types').PodCondition[] | undefined
-    let containers: import('../shared/types').ContainerStateInfo[] | undefined
-
-    if (kind === 'Pod') {
-      const pod = await client.coreApi.readNamespacedPod({ name, namespace })
-
-      conditions = (pod.status?.conditions ?? []).map((c) => ({
-        type: c.type,
-        status: c.status as 'True' | 'False' | 'Unknown',
-        reason: c.reason,
-        message: c.message
-      }))
-
-      const initStatuses = (pod.status?.initContainerStatuses ?? []).map((cs) => toContainerStateInfo(cs, true))
-      const regularStatuses = (pod.status?.containerStatuses ?? []).map((cs) => toContainerStateInfo(cs, false))
-      containers = [...initStatuses, ...regularStatuses]
+  ipcMain.handle(
+    'k8s:helm-info',
+    async (_event, _cluster: string, _namespace: string, labels: Record<string, string>) => {
+      return parseHelmLabels(labels)
     }
+  )
 
-    const helm = parseHelmLabels(resource.labels)
+  ipcMain.handle(
+    'k8s:get-resource-detail',
+    async (_event, cluster: string, namespace: string, name: string, kind: string) => {
+      const resources = cache.getAll(cluster)
+      const resource = resources.find((r) => r.name === name && r.namespace === namespace && r.kind === kind)
+      if (!resource) throw new Error(`Resource not found: ${kind}/${name}`)
 
-    const detail: ResourceDetail = {
-      resource,
-      events: filteredEvents,
-      logs,
-      resources: {
-        cpuActual: metrics?.cpuActual,
-        memActual: metrics?.memActual,
-        metricsAvailable: client.metricsAvailable
-      },
-      related,
-      helm: helm ?? undefined,
-      conditions,
-      containers
+      const client = getClient(cluster)
+      if (!client) throw new Error(`Not connected to ${cluster}`)
+
+      const eventsResult = await client.coreApi.listNamespacedEvent({ namespace })
+      const filteredEvents: K8sEvent[] = eventsResult.items
+        .filter((e) => e.involvedObject?.name === name)
+        .map(mapEvent)
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+
+      const [logs, related, metrics] = await Promise.all([
+        kind === 'Pod' ? fetchLogs(cluster, namespace, name) : Promise.resolve([]),
+        fetchRelated(cluster, namespace, name, kind),
+        kind === 'Pod' ? fetchPodMetrics(cluster, namespace, name) : Promise.resolve(null)
+      ])
+
+      let conditions: PodCondition[] | undefined
+      let containers: ContainerStateInfo[] | undefined
+
+      if (kind === 'Pod') {
+        const pod = await client.coreApi.readNamespacedPod({ name, namespace })
+
+        conditions = (pod.status?.conditions ?? []).map((c) => ({
+          type: c.type,
+          status: c.status as 'True' | 'False' | 'Unknown',
+          reason: c.reason,
+          message: c.message
+        }))
+
+        const initStatuses = (pod.status?.initContainerStatuses ?? []).map((cs) => toContainerStateInfo(cs, true))
+        const regularStatuses = (pod.status?.containerStatuses ?? []).map((cs) => toContainerStateInfo(cs, false))
+        containers = [...initStatuses, ...regularStatuses]
+      }
+
+      const helm = parseHelmLabels(resource.labels)
+
+      const detail: ResourceDetail = {
+        resource,
+        events: filteredEvents,
+        logs,
+        resources: {
+          cpuActual: metrics?.cpuActual,
+          memActual: metrics?.memActual,
+          metricsAvailable: client.metricsAvailable
+        },
+        related,
+        helm: helm ?? undefined,
+        conditions,
+        containers
+      }
+
+      return detail
     }
-
-    return detail
-  })
+  )
 
   ipcMain.handle('k8s:export-snapshot', async (_event, detail: ResourceDetail) => {
     const markdown = generateSnapshot(detail)
@@ -206,25 +221,18 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     if (!client) throw new Error(`Not connected to ${cluster}`)
 
     const events = await client.coreApi.listNamespacedEvent({ namespace })
-    return events.items
-      .map((e): K8sEvent => ({
-        timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? '',
-        type: e.type ?? 'Normal',
-        reason: e.reason ?? '',
-        message: e.message ?? '',
-        involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
-        count: e.count ?? 1,
-        source: e.source?.component ?? ''
-      }))
-      .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    return events.items.map(mapEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp))
   })
 
-  ipcMain.handle('k8s:start-log-stream', (_event, cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => {
-    const streamId = startLogStream(cluster, namespace, pod, container, timestamps ?? false, (data) => {
-      mainWindow.webContents.send('k8s:log-chunk', { streamId, data })
-    })
-    return streamId
-  })
+  ipcMain.handle(
+    'k8s:start-log-stream',
+    (_event, cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => {
+      const streamId = startLogStream(cluster, namespace, pod, container, timestamps ?? false, (data) => {
+        mainWindow.webContents.send('k8s:log-chunk', { streamId, data })
+      })
+      return streamId
+    }
+  )
 
   ipcMain.handle('k8s:stop-log-stream', (_event, streamId: string) => {
     stopLogStream(streamId)

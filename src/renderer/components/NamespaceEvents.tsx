@@ -17,7 +17,8 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
 
   useEffect(() => {
     setLoading(true)
-    k8s.getNamespaceEvents(cluster, namespace)
+    k8s
+      .getNamespaceEvents(cluster, namespace)
       .then(setEvents)
       .catch(() => setEvents([]))
       .finally(() => setLoading(false))
@@ -28,9 +29,11 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
       if (typeFilter !== 'all' && e.type !== typeFilter) return false
       if (search) {
         const lower = search.toLowerCase()
-        return e.message.toLowerCase().includes(lower)
-          || e.reason.toLowerCase().includes(lower)
-          || e.involvedObject.toLowerCase().includes(lower)
+        return (
+          e.message.toLowerCase().includes(lower) ||
+          e.reason.toLowerCase().includes(lower) ||
+          e.involvedObject.toLowerCase().includes(lower)
+        )
       }
       return true
     })
@@ -57,17 +60,30 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
         </HTMLSelect>
       </div>
       {filtered.length === 0 ? (
-        <NonIdealState icon="search" title="No events" description={search ? 'No matching events' : 'No events in this namespace'} />
+        <NonIdealState
+          icon="search"
+          title="No events"
+          description={search ? 'No matching events' : 'No events in this namespace'}
+        />
       ) : (
         <div className="monospace" style={{ fontSize: 12, maxHeight: 400, overflow: 'auto' }}>
           {filtered.map((event, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', alignItems: 'center' }}>
-              <span className="bp5-text-muted" style={{ minWidth: 60 }}>{formatTs(event.timestamp)}</span>
-              {event.source && <span className="bp5-text-muted" style={{ minWidth: 70, fontSize: 11 }}>{event.source}</span>}
+              <span className="bp5-text-muted" style={{ minWidth: 60 }}>
+                {formatTs(event.timestamp)}
+              </span>
+              {event.source && (
+                <span className="bp5-text-muted" style={{ minWidth: 70, fontSize: 11 }}>
+                  {event.source}
+                </span>
+              )}
               <Tag minimal intent={event.type === 'Warning' ? Intent.WARNING : Intent.NONE} style={{ minWidth: 100 }}>
-                {event.reason}{event.count > 1 ? ` x${event.count}` : ''}
+                {event.reason}
+                {event.count > 1 ? ` x${event.count}` : ''}
               </Tag>
-              <span className="bp5-text-muted" style={{ minWidth: 120 }}>{event.involvedObject}</span>
+              <span className="bp5-text-muted" style={{ minWidth: 120 }}>
+                {event.involvedObject}
+              </span>
               <span>{event.message}</span>
             </div>
           ))}
@@ -78,6 +94,9 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
 }
 
 function formatTs(ts: string): string {
-  try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-  catch { return ts }
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return ts
+  }
 }

@@ -10,11 +10,13 @@ const api: HorusAPI = {
     ipcRenderer.on('k8s:resource-update', handler)
     return () => ipcRenderer.removeListener('k8s:resource-update', handler)
   },
-  getLogs: (cluster, namespace, pod, timestamps) => ipcRenderer.invoke('k8s:get-logs', cluster, namespace, pod, timestamps),
+  getLogs: (cluster, namespace, pod, timestamps) =>
+    ipcRenderer.invoke('k8s:get-logs', cluster, namespace, pod, timestamps),
   getEvents: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-events', cluster, namespace, name),
   getRelated: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:get-related', cluster, namespace, name, kind),
   getHelmInfo: (cluster, namespace, labels) => ipcRenderer.invoke('k8s:helm-info', cluster, namespace, labels),
-  getResourceDetail: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:get-resource-detail', cluster, namespace, name, kind),
+  getResourceDetail: (cluster, namespace, name, kind) =>
+    ipcRenderer.invoke('k8s:get-resource-detail', cluster, namespace, name, kind),
   exportSnapshot: (detail) => ipcRenderer.invoke('k8s:export-snapshot', detail),
   getPodYaml: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-pod-yaml', cluster, namespace, name),
   getNamespaceEvents: (cluster, namespace) => ipcRenderer.invoke('k8s:get-namespace-events', cluster, namespace),

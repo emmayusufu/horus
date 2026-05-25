@@ -43,7 +43,17 @@ export function PodYamlView({ cluster, namespace, name }: PodYamlViewProps) {
       <Collapse isOpen={isOpen}>
         <pre
           className="monospace"
-          style={{ maxHeight: 400, overflow: 'auto', margin: '8px 0 0', padding: 8, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 4, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: 11 }}
+          style={{
+            maxHeight: 400,
+            overflow: 'auto',
+            margin: '8px 0 0',
+            padding: 8,
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            borderRadius: 4,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+            fontSize: 11
+          }}
         >
           {yaml ?? ''}
         </pre>

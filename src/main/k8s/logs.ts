@@ -37,33 +37,12 @@ async function fetchContainerLogs(
   containerName: string,
   timestamps: boolean
 ): Promise<Omit<ContainerLogs, 'isInit'>> {
-  let current = ''
-  let previous: string | undefined
+  const logOpts = { name: podName, namespace, container: containerName, tailLines: 200, timestamps }
 
-  try {
-    current = await client.coreApi.readNamespacedPodLog({
-      name: podName,
-      namespace,
-      container: containerName,
-      tailLines: 200,
-      timestamps
-    })
-  } catch {
-    current = '(no logs available)'
-  }
-
-  try {
-    previous = await client.coreApi.readNamespacedPodLog({
-      name: podName,
-      namespace,
-      container: containerName,
-      previous: true,
-      tailLines: 200,
-      timestamps
-    })
-  } catch {
-    // no previous container
-  }
+  const current = await client.coreApi.readNamespacedPodLog(logOpts).catch(() => '(no logs available)')
+  const previous = await client.coreApi
+    .readNamespacedPodLog({ ...logOpts, previous: true })
+    .catch(() => undefined)
 
   return { containerName, current, previous }
 }
@@ -94,13 +73,15 @@ export function startLogStream(
     activeStreams.delete(streamId)
   })
 
-  log.log(namespace, podName, containerName, passthrough, {
-    follow: true,
-    tailLines: 200,
-    timestamps
-  }).catch(() => {
-    activeStreams.delete(streamId)
-  })
+  log
+    .log(namespace, podName, containerName, passthrough, {
+      follow: true,
+      tailLines: 200,
+      timestamps
+    })
+    .catch(() => {
+      activeStreams.delete(streamId)
+    })
 
   return streamId
 }

@@ -2,7 +2,10 @@ import type { ResourceDetail } from '../../shared/types'
 
 export function generateSnapshot(detail: ResourceDetail): string {
   const { resource, events, logs, resources, related, helm } = detail
-  const now = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z/, ' UTC')
+  const now = new Date()
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d+Z/, ' UTC')
 
   const lines: string[] = [
     '# Horus Debug Snapshot',
@@ -67,8 +70,12 @@ export function generateSnapshot(detail: ResourceDetail): string {
   lines.push('')
 
   lines.push('## Resources')
-  lines.push(`cpu request: ${resources.cpuRequest ?? 'none'} | limit: ${resources.cpuLimit ?? 'none'} | actual: ${resources.cpuActual ?? (resources.metricsAvailable ? 'n/a' : 'metrics unavailable')}`)
-  lines.push(`mem request: ${resources.memRequest ?? 'none'} | limit: ${resources.memLimit ?? 'none'} | actual: ${resources.memActual ?? (resources.metricsAvailable ? 'n/a' : 'metrics unavailable')}`)
+  lines.push(
+    `cpu request: ${resources.cpuRequest ?? 'none'} | limit: ${resources.cpuLimit ?? 'none'} | actual: ${resources.cpuActual ?? (resources.metricsAvailable ? 'n/a' : 'metrics unavailable')}`
+  )
+  lines.push(
+    `mem request: ${resources.memRequest ?? 'none'} | limit: ${resources.memLimit ?? 'none'} | actual: ${resources.memActual ?? (resources.metricsAvailable ? 'n/a' : 'metrics unavailable')}`
+  )
   lines.push('')
 
   lines.push('## Related Resources')

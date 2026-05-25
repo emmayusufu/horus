@@ -22,7 +22,9 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
   const streamIdRef = useRef<string | null>(null)
   const preRef = useRef<HTMLPreElement>(null)
 
-  useEffect(() => { setCurrentLogs(logs) }, [logs])
+  useEffect(() => {
+    setCurrentLogs(logs)
+  }, [logs])
 
   const current = currentLogs[selectedContainer]
   const isPod = currentLogs.length > 0
@@ -94,9 +96,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
     setStreamBuffer('')
   }
 
-  const rawText = following
-    ? streamBuffer
-    : (showPrevious ? current?.previous : current?.current) ?? ''
+  const rawText = following ? streamBuffer : ((showPrevious ? current?.previous : current?.current) ?? '')
 
   const displayLines = useMemo(() => {
     const lines = rawText.split('\n')
@@ -108,13 +108,21 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
   const filteredLines = searchQuery ? displayLines.filter((l) => l.match) : displayLines
 
   if (!isPod) {
-    return (<Card style={{ marginBottom: 12 }}><H5>Logs</H5><span className="bp5-text-muted">No logs available (not a Pod)</span></Card>)
+    return (
+      <Card style={{ marginBottom: 12 }}>
+        <H5>Logs</H5>
+        <span className="bp5-text-muted">No logs available (not a Pod)</span>
+      </Card>
+    )
   }
 
   return (
     <Card style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <H5 style={{ margin: 0 }}>Logs ({current?.containerName}{current?.isInit ? ' — init' : ''})</H5>
+        <H5 style={{ margin: 0 }}>
+          Logs ({current?.containerName}
+          {current?.isInit ? ' — init' : ''})
+        </H5>
         <ButtonGroup minimal>
           {currentLogs.map((log, i) => (
             <Button
@@ -126,9 +134,19 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
             />
           ))}
           {current?.previous && !following && (
-            <Button text={showPrevious ? 'current' : 'prev container'} active={showPrevious} onClick={() => setShowPrevious(!showPrevious)} />
+            <Button
+              text={showPrevious ? 'current' : 'prev container'}
+              active={showPrevious}
+              onClick={() => setShowPrevious(!showPrevious)}
+            />
           )}
-          <Button icon="play" text={following ? 'Stop' : 'Follow'} active={following} intent={following ? 'success' : 'none'} onClick={handleFollowToggle} />
+          <Button
+            icon="play"
+            text={following ? 'Stop' : 'Follow'}
+            active={following}
+            intent={following ? 'success' : 'none'}
+            onClick={handleFollowToggle}
+          />
         </ButtonGroup>
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
@@ -145,10 +163,21 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
       <pre
         ref={preRef}
         className="monospace"
-        style={{ maxHeight: 300, overflow: 'auto', margin: 0, padding: 8, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 4, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
+        style={{
+          maxHeight: 300,
+          overflow: 'auto',
+          margin: 0,
+          padding: 8,
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          borderRadius: 4,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all'
+        }}
       >
         {filteredLines.map((line, i) => (
-          <div key={i} style={getLogLevelStyle(line.text)}>{highlightMatch(line.text, searchQuery)}</div>
+          <div key={i} style={getLogLevelStyle(line.text)}>
+            {highlightMatch(line.text, searchQuery)}
+          </div>
         ))}
         {filteredLines.length === 0 && <span className="bp5-text-muted">(no matching lines)</span>}
       </pre>
@@ -165,7 +194,9 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   return (
     <>
       {text.slice(0, idx)}
-      <mark style={{ backgroundColor: '#FBD065', color: '#1C2127', borderRadius: 2, padding: '0 1px' }}>{text.slice(idx, idx + query.length)}</mark>
+      <mark style={{ backgroundColor: '#FBD065', color: '#1C2127', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
       {text.slice(idx + query.length)}
     </>
   )

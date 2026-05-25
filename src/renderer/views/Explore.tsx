@@ -12,7 +12,17 @@ interface ExploreProps {
   onSelectResource: (resource: K8sResource) => void
 }
 
-const KINDS: ResourceKind[] = ['Pod', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'Service', 'Ingress', 'ConfigMap', 'Secret']
+const KINDS: ResourceKind[] = [
+  'Pod',
+  'Deployment',
+  'StatefulSet',
+  'DaemonSet',
+  'Job',
+  'Service',
+  'Ingress',
+  'ConfigMap',
+  'Secret'
+]
 
 export function Explore({ cluster, resources, onSelectResource }: ExploreProps) {
   const [namespace, setNamespace] = useState<string>('all')
@@ -50,11 +60,19 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <HTMLSelect value={namespace} onChange={(e) => setNamespace(e.target.value)}>
-          {namespaces.map((ns) => <option key={ns} value={ns}>{ns === 'all' ? 'All namespaces' : ns}</option>)}
+          {namespaces.map((ns) => (
+            <option key={ns} value={ns}>
+              {ns === 'all' ? 'All namespaces' : ns}
+            </option>
+          ))}
         </HTMLSelect>
         <HTMLSelect value={kind} onChange={(e) => setKind(e.target.value as any)}>
           <option value="all">All types</option>
-          {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
+          {KINDS.map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
         </HTMLSelect>
         <HTMLSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">All status</option>
@@ -70,17 +88,33 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
           />
         )}
       </div>
-      {showEvents && namespace !== 'all' && (
-        <NamespaceEvents cluster={cluster} namespace={namespace} />
-      )}
+      {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
       {helmInfo && <HelmBanner helm={helmInfo} />}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <Table2 numRows={filtered.length} enableRowResizing={false} columnWidths={[200, 100, 80, 60, 80, 100]} cellRendererDependencies={[filtered]}>
-          <Column name="Name" cellRenderer={(row) => <Cell interactive onClick={() => onSelectResource(filtered[row])}><span className="monospace">{filtered[row]?.name}</span></Cell>} />
+        <Table2
+          numRows={filtered.length}
+          enableRowResizing={false}
+          columnWidths={[200, 100, 80, 60, 80, 100]}
+          cellRendererDependencies={[filtered]}
+        >
+          <Column
+            name="Name"
+            cellRenderer={(row) => (
+              <Cell interactive onClick={() => onSelectResource(filtered[row])}>
+                <span className="monospace">{filtered[row]?.name}</span>
+              </Cell>
+            )}
+          />
           <Column name="Kind" cellRenderer={(row) => <Cell>{filtered[row]?.kind}</Cell>} />
           <Column name="Status" cellRenderer={(row) => <Cell>{filtered[row]?.status}</Cell>} />
-          <Column name="Restarts" cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.restarts}</Cell>} />
-          <Column name="Namespace" cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.namespace}</Cell>} />
+          <Column
+            name="Restarts"
+            cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.restarts}</Cell>}
+          />
+          <Column
+            name="Namespace"
+            cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.namespace}</Cell>}
+          />
           <Column name="Node" cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.node}</Cell>} />
         </Table2>
       </div>

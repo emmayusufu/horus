@@ -1,7 +1,9 @@
 import { Card, H5, Tag, Intent } from '@blueprintjs/core'
 import type { ContainerStateInfo } from '../../shared/types'
 
-interface ContainerStatesProps { containers: ContainerStateInfo[] }
+interface ContainerStatesProps {
+  containers: ContainerStateInfo[]
+}
 
 export function ContainerStates({ containers }: ContainerStatesProps) {
   if (containers.length === 0) return null
@@ -12,9 +14,13 @@ export function ContainerStates({ containers }: ContainerStatesProps) {
       <div className="monospace" style={{ fontSize: 12 }}>
         {containers.map((c) => (
           <div key={c.name} style={{ display: 'flex', gap: 8, padding: '2px 0', alignItems: 'center' }}>
-            <Tag minimal intent={stateIntent(c)} style={{ minWidth: 80 }}>{c.state}</Tag>
+            <Tag minimal intent={stateIntent(c)} style={{ minWidth: 80 }}>
+              {c.state}
+            </Tag>
             <span>{c.isInit ? `${c.name} (init)` : c.name}</span>
-            <Tag minimal round intent={c.ready ? Intent.SUCCESS : Intent.NONE}>{c.ready ? 'ready' : 'not ready'}</Tag>
+            <Tag minimal round intent={c.ready ? Intent.SUCCESS : Intent.NONE}>
+              {c.ready ? 'ready' : 'not ready'}
+            </Tag>
             {c.reason && <span className="bp5-text-muted">{c.reason}</span>}
             {c.exitCode !== undefined && <span className="bp5-text-muted">exit: {c.exitCode}</span>}
           </div>
