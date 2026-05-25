@@ -54,8 +54,7 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
   const [namespace, setNamespace] = useState<string>('all')
   const [kind, setKind] = useState<ResourceKind | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [showEvents, setShowEvents] = useState(false)
-  const [showInsights, setShowInsights] = useState(true)
+  const [tab, setTab] = useState<'resources' | 'insights'>('resources')
 
   const namespaces = useMemo(() => {
     const ns = new Set(resources.map((r) => r.namespace))
@@ -104,51 +103,16 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
           <option value="all">All status</option>
           <option value="unhealthy">Unhealthy only</option>
         </HTMLSelect>
-        {namespace !== 'all' && (
-          <Button
-            small
-            icon="timeline-events"
-            text={showEvents ? 'Hide Events' : 'Namespace Events'}
-            active={showEvents}
-            onClick={() => setShowEvents(!showEvents)}
-          />
-        )}
-        <Button
-          small
-          icon="dashboard"
-          text={showInsights ? 'Hide Insights' : 'Insights'}
-          active={showInsights}
-          onClick={() => setShowInsights(!showInsights)}
-        />
         {onShowNodes && <Button small icon="cloud" text="Nodes" onClick={onShowNodes} />}
         {onShowSecurity && <Button small icon="shield" text="Security" onClick={onShowSecurity} />}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+          <Button small active={tab === 'resources'} onClick={() => setTab('resources')} icon="th">Resources</Button>
+          <Button small active={tab === 'insights'} onClick={() => setTab('insights')} icon="dashboard">Insights</Button>
+        </div>
       </div>
+      {tab === 'resources' && (
+        <>
       {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
-      {showInsights && namespace !== 'all' && (
-        <div style={{ marginBottom: 12 }}>
-          <TopologyMap cluster={cluster} namespace={namespace} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <OwnershipTree resources={filtered} onSelect={onSelectResource} />
-              <HPAStatus cluster={cluster} namespace={namespace} />
-              <QuotaView cluster={cluster} namespace={namespace} />
-              <SizingRecs cluster={cluster} namespace={namespace} />
-            </div>
-            <div>
-              <DependencyGraph cluster={cluster} namespace={namespace} />
-              <PVCList cluster={cluster} namespace={namespace} />
-              <ConfigChecks cluster={cluster} namespace={namespace} />
-            </div>
-          </div>
-        </div>
-      )}
-      {showInsights && namespace === 'all' && (
-        <div style={{ marginBottom: 12 }}>
-          <HelmReleases cluster={cluster} />
-          <NodeTopology resources={resources} onSelect={onSelectResource} />
-          <OwnershipTree resources={resources} onSelect={onSelectResource} />
-        </div>
-      )}
       {helmInfo && <HelmBanner helm={helmInfo} />}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Table2
@@ -228,6 +192,36 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
           />
         </Table2>
       </div>
+        </>
+      )}
+      {tab === 'insights' && (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          {namespace !== 'all' && <TopologyMap cluster={cluster} namespace={namespace} />}
+          {namespace !== 'all' && namespace !== 'all' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <OwnershipTree resources={filtered} onSelect={onSelectResource} />
+                <HPAStatus cluster={cluster} namespace={namespace} />
+                <QuotaView cluster={cluster} namespace={namespace} />
+                <SizingRecs cluster={cluster} namespace={namespace} />
+              </div>
+              <div>
+                <DependencyGraph cluster={cluster} namespace={namespace} />
+                <PVCList cluster={cluster} namespace={namespace} />
+                <ConfigChecks cluster={cluster} namespace={namespace} />
+              </div>
+            </div>
+          )}
+          {namespace === 'all' && (
+            <>
+              <HelmReleases cluster={cluster} />
+              <NodeTopology resources={resources} onSelect={onSelectResource} />
+              <OwnershipTree resources={resources} onSelect={onSelectResource} />
+            </>
+          )}
+          {namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
+        </div>
+      )}
     </div>
   )
 }
