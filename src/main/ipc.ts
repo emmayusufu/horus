@@ -19,9 +19,16 @@ import type {
 } from '../shared/types'
 import { writeFileSync } from 'fs'
 
+function toISO(val: any): string {
+  if (!val) return ''
+  if (typeof val === 'string') return val
+  if (typeof val.toISOString === 'function') return val.toISOString()
+  return String(val)
+}
+
 function mapEvent(e: any): K8sEvent {
   return {
-    timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? '',
+    timestamp: toISO(e.lastTimestamp) || toISO(e.eventTime),
     type: e.type ?? 'Normal',
     reason: e.reason ?? '',
     message: e.message ?? '',
