@@ -207,13 +207,11 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
         style={{
           maxHeight: 500,
           overflow: 'auto',
-          margin: 0,
-          backgroundColor: 'rgba(0,0,0,0.35)',
-          borderRadius: 6
+          margin: 0
         }}
       >
         {filteredLines.map((line, i) => (
-          <div key={i} className="log-line" style={getLogLevelStyle(line.text)}>
+          <div key={i} className={`log-line ${getLogLevelClass(line.text) ?? ''}`}>
             <span className="log-line-number">{searchQuery ? displayLines.indexOf(line) + 1 : i + 1}</span>
             <span
               className="log-line-content"
@@ -269,16 +267,10 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   )
 }
 
-function getLogLevelStyle(text: string): React.CSSProperties | undefined {
+function getLogLevelClass(text: string): string | undefined {
   const upper = text.toUpperCase()
-  if (upper.includes('ERROR') || upper.includes('FATAL') || upper.includes('PANIC')) {
-    return { color: '#e5564f' }
-  }
-  if (upper.includes('WARN')) {
-    return { color: '#cc8d35' }
-  }
-  if (upper.includes('DEBUG') || upper.includes('TRACE')) {
-    return { color: '#6e9fff', opacity: 0.7 }
-  }
+  if (upper.includes('ERROR') || upper.includes('FATAL') || upper.includes('PANIC')) return 'log-level-error'
+  if (upper.includes('WARN')) return 'log-level-warn'
+  if (upper.includes('DEBUG') || upper.includes('TRACE')) return 'log-level-debug'
   return undefined
 }
