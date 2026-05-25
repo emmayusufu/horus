@@ -5,6 +5,8 @@ import { LogViewer } from '../components/LogViewer'
 import { ResourceUsage } from '../components/ResourceUsage'
 import { RelatedList } from '../components/RelatedList'
 import { HelmBanner } from '../components/HelmBanner'
+import { PodConditions } from '../components/PodConditions'
+import { ContainerStates } from '../components/ContainerStates'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -68,6 +70,8 @@ export function Debug({ resource, onBack }: DebugProps) {
         {resource.node && <span className="monospace">Node: {resource.node}</span>}
         {resource.ownerKind && <span className="monospace">Owner: {resource.ownerKind}/{resource.ownerName}</span>}
       </div>
+      {detail.conditions && detail.conditions.length > 0 && <PodConditions conditions={detail.conditions} />}
+      {detail.containers && detail.containers.length > 0 && <ContainerStates containers={detail.containers} />}
       {detail.helm && <HelmBanner helm={detail.helm} />}
       <Timeline events={detail.events} />
       <LogViewer logs={detail.logs} cluster={resource.cluster} namespace={resource.namespace} podName={resource.name} />
