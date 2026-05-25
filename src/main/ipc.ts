@@ -60,8 +60,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     cache.clear(context)
   })
 
-  ipcMain.handle('k8s:get-logs', async (_event, cluster: string, namespace: string, pod: string) => {
-    return fetchLogs(cluster, namespace, pod)
+  ipcMain.handle('k8s:get-logs', async (_event, cluster: string, namespace: string, pod: string, timestamps?: boolean) => {
+    return fetchLogs(cluster, namespace, pod, timestamps)
   })
 
   ipcMain.handle('k8s:get-events', async (_event, cluster: string, namespace: string, name: string) => {
