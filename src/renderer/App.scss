@@ -74,6 +74,83 @@ html, body, #root {
   font-family: 'Source Code Pro', 'SF Mono', 'Cascadia Code', monospace !important;
 }
 
+// Blueprint dark overrides
+.horus-dark {
+  .bp5-card {
+    background: var(--bg-card) !important;
+    box-shadow: none !important;
+    border: 1px solid var(--border);
+  }
+
+  .bp5-navbar {
+    background: var(--bg-secondary) !important;
+    box-shadow: 0 1px 0 var(--border) !important;
+  }
+
+  .bp5-input,
+  .bp5-html-select select,
+  .bp5-tag.bp5-minimal {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .bp5-html-table {
+    color: var(--text-primary);
+  }
+
+  .bp5-html-table th {
+    color: var(--text-muted);
+  }
+
+  .bp5-breadcrumb,
+  .bp5-breadcrumbs-collapsed {
+    color: var(--text-muted);
+  }
+
+  .bp5-button.bp5-minimal {
+    color: var(--text-primary) !important;
+  }
+
+  .bp5-checkbox .bp5-control-indicator {
+    background: var(--bg-elevated) !important;
+  }
+
+  .bp5-table-container,
+  .bp5-table-top-container,
+  .bp5-table-bottom-container,
+  .bp5-table-quadrant-main,
+  .bp5-table-quadrant-top,
+  .bp5-table-quadrant-left,
+  .bp5-table-cell,
+  .bp5-table-header {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .bp5-table-header {
+    color: var(--text-muted) !important;
+  }
+
+  .bp5-dialog {
+    background: var(--bg-card) !important;
+  }
+
+  .bp5-dialog-header {
+    background: var(--bg-elevated) !important;
+  }
+
+  .bp5-non-ideal-state {
+    color: var(--text-muted);
+  }
+}
+
+.horus-light {
+  .bp5-card {
+    background: var(--bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+}
+
 // --- Debug page ---
 
 .debug-page {
