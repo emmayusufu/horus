@@ -205,11 +205,11 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
         ref={preRef}
         className="log-viewer-output"
         style={{
-          maxHeight: 400,
+          maxHeight: 500,
           overflow: 'auto',
           margin: 0,
-          backgroundColor: 'rgba(0,0,0,0.3)',
-          borderRadius: 4
+          backgroundColor: 'rgba(0,0,0,0.35)',
+          borderRadius: 6
         }}
       >
         {filteredLines.map((line, i) => (
