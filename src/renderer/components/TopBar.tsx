@@ -31,7 +31,7 @@ export function TopBar({ breadcrumbs, onCommandPalette, darkMode, onToggleDarkMo
           <Button minimal icon={darkMode ? 'flash' : 'moon'} onClick={onToggleDarkMode} />
         </Navbar.Group>
       </Navbar>
-      <Dialog isOpen={showHelp} onClose={() => setShowHelp(false)} title="Keyboard Shortcuts" style={{ width: 360 }}>
+      <Dialog isOpen={showHelp} onClose={() => setShowHelp(false)} title="Keyboard Shortcuts" style={{ width: 360 }} backdropClassName="horus-backdrop">
         <div style={{ padding: '12px 20px' }}>
           {SHORTCUTS.map(([key, desc]) => (
             <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
