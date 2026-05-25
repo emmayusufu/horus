@@ -159,6 +159,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
           small
         />
         <Checkbox checked={timestamps} onChange={handleTimestampsToggle} label="Timestamps" style={{ margin: 0 }} />
+        <Button small minimal icon="clipboard" onClick={() => navigator.clipboard.writeText(rawText)} />
       </div>
       <pre
         ref={preRef}

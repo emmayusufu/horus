@@ -69,6 +69,7 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
         <span className="monospace" style={{ fontSize: 16 }}>
           {resource.name}
         </span>
+        <Button minimal small icon="clipboard" onClick={() => navigator.clipboard.writeText(`${resource.namespace}/${resource.name}`)} />
         <div style={{ marginLeft: 'auto' }}>
           <Button icon="export" text="Export snapshot" onClick={handleExport} />
         </div>

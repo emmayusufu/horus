@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, Notification } from 'electron'
 import { loadContexts, connectCluster, disconnectCluster, getClient } from './k8s/client'
 import { startWatching, stopWatching } from './k8s/watcher'
 import { ResourceCache } from './k8s/cache'
@@ -67,6 +67,20 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       await checkMetricsAvailable(context)
 
       await startWatching(context, (resources) => {
+        const previous = cache.getAll(context)
+
+        for (const r of resources) {
+          if (r.health === 'critical') {
+            const prev = previous.find((p) => p.uid === r.uid)
+            if (prev && prev.health !== 'critical') {
+              new Notification({
+                title: `${r.kind} unhealthy`,
+                body: `${r.name} in ${r.namespace} — ${r.status}`
+              }).show()
+            }
+          }
+        }
+
         cache.set(context, resources)
         const info: ClusterInfo = {
           name: context,
