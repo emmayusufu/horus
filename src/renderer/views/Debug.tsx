@@ -14,9 +14,10 @@ import type { K8sResource, ResourceDetail } from '../../shared/types'
 interface DebugProps {
   resource: K8sResource
   onBack: () => void
+  onNavigate: (ownerKind: string, ownerName: string, namespace: string, cluster: string) => void
 }
 
-export function Debug({ resource, onBack }: DebugProps) {
+export function Debug({ resource, onBack, onNavigate }: DebugProps) {
   const k8s = useK8s()
   const [detail, setDetail] = useState<ResourceDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -79,7 +80,11 @@ export function Debug({ resource, onBack }: DebugProps) {
         <span className="monospace">Restarts: {resource.restarts}</span>
         {resource.node && <span className="monospace">Node: {resource.node}</span>}
         {resource.ownerKind && (
-          <span className="monospace">
+          <span
+            className="monospace"
+            style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+            onClick={() => onNavigate(resource.ownerKind!, resource.ownerName!, resource.namespace, resource.cluster)}
+          >
             Owner: {resource.ownerKind}/{resource.ownerName}
           </span>
         )}
