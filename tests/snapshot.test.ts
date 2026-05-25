@@ -93,4 +93,35 @@ describe('generateSnapshot', () => {
     expect(md).toContain('init-db (init)')
     expect(md).not.toContain('main (init)')
   })
+
+  it('includes pod conditions', () => {
+    const md = generateSnapshot(makeDetail({
+      conditions: [
+        { type: 'Ready', status: 'False', reason: 'ContainersNotReady' },
+        { type: 'PodScheduled', status: 'True' }
+      ]
+    }))
+    expect(md).toContain('## Conditions')
+    expect(md).toContain('Ready: False (ContainersNotReady)')
+    expect(md).toContain('PodScheduled: True')
+  })
+
+  it('includes container states', () => {
+    const md = generateSnapshot(makeDetail({
+      containers: [
+        { name: 'main', state: 'waiting' as const, ready: false, reason: 'CrashLoopBackOff', isInit: false },
+        { name: 'init-db', state: 'terminated' as const, ready: false, exitCode: 0, isInit: true }
+      ]
+    }))
+    expect(md).toContain('## Containers')
+    expect(md).toContain('main: waiting [not ready]')
+    expect(md).toContain('CrashLoopBackOff')
+    expect(md).toContain('init-db (init): terminated')
+    expect(md).toContain('exit:0')
+  })
+
+  it('omits conditions section when not present', () => {
+    const md = generateSnapshot(makeDetail({ conditions: undefined }))
+    expect(md).not.toContain('## Conditions')
+  })
 })

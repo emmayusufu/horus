@@ -21,6 +21,27 @@ export function generateSnapshot(detail: ResourceDetail): string {
     lines.push('')
   }
 
+  if (detail.conditions && detail.conditions.length > 0) {
+    lines.push('## Conditions')
+    for (const c of detail.conditions) {
+      const reasonSuffix = c.reason ? ` (${c.reason})` : ''
+      lines.push(`- ${c.type}: ${c.status}${reasonSuffix}`)
+    }
+    lines.push('')
+  }
+
+  if (detail.containers && detail.containers.length > 0) {
+    lines.push('## Containers')
+    for (const c of detail.containers) {
+      const initLabel = c.isInit ? ' (init)' : ''
+      const readyLabel = c.ready ? 'ready' : 'not ready'
+      const reasonSuffix = c.reason ? ` — ${c.reason}` : ''
+      const exitSuffix = c.exitCode !== undefined ? ` exit:${c.exitCode}` : ''
+      lines.push(`- ${c.name}${initLabel}: ${c.state} [${readyLabel}]${reasonSuffix}${exitSuffix}`)
+    }
+    lines.push('')
+  }
+
   lines.push('## Timeline')
   for (const event of events) {
     const countSuffix = event.count > 1 ? ` (x${event.count})` : ''
