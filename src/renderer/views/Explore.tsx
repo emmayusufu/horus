@@ -8,7 +8,6 @@ import { PVCList } from '../components/PVCList'
 import { QuotaView } from '../components/QuotaView'
 import { ConfigChecks } from '../components/ConfigChecks'
 import { TopologyMap } from '../components/TopologyMap'
-import { CostView } from '../components/CostView'
 import { HelmReleases } from '../components/HelmReleases'
 import { SizingRecs } from '../components/SizingRecs'
 import { OwnershipTree } from '../components/OwnershipTree'
@@ -145,10 +144,7 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
       )}
       {showInsights && namespace === 'all' && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <CostView cluster={cluster} />
-            <HelmReleases cluster={cluster} />
-          </div>
+          <HelmReleases cluster={cluster} />
           <NodeTopology resources={resources} onSelect={onSelectResource} />
           <OwnershipTree resources={resources} onSelect={onSelectResource} />
         </div>
