@@ -20,16 +20,6 @@ export function App() {
     document.body.classList.toggle('horus-dark', darkMode)
     document.body.classList.toggle('horus-light', !darkMode)
     document.body.style.background = darkMode ? '#1a1b1e' : '#f5f5f5'
-
-    let styleEl = document.getElementById('horus-overlay-style')
-    if (!styleEl) {
-      styleEl = document.createElement('style')
-      styleEl.id = 'horus-overlay-style'
-      document.head.appendChild(styleEl)
-    }
-    styleEl.textContent = darkMode
-      ? `.bp6-overlay-backdrop { background-color: rgba(200,200,220,0.08) !important; -webkit-backdrop-filter: blur(8px) !important; }`
-      : `.bp6-overlay-backdrop { background-color: rgba(0,0,0,0.25) !important; -webkit-backdrop-filter: blur(4px) !important; }`
   }, [darkMode])
   const { clusters, resourcesByCluster, allResources, unhealthy } = useResources()
   const k8s = useK8s()

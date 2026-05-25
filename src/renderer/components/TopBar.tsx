@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Navbar, Button, Breadcrumbs, Dialog, type BreadcrumbProps } from '@blueprintjs/core'
+import { Navbar, Button, Breadcrumbs, type BreadcrumbProps } from '@blueprintjs/core'
+import { Modal } from './Modal'
 
 interface TopBarProps {
   breadcrumbs: BreadcrumbProps[]
@@ -31,20 +32,18 @@ export function TopBar({ breadcrumbs, onCommandPalette, darkMode, onToggleDarkMo
           <Button minimal icon={darkMode ? 'flash' : 'moon'} onClick={onToggleDarkMode} />
         </Navbar.Group>
       </Navbar>
-      <Dialog isOpen={showHelp} onClose={() => setShowHelp(false)} title="Keyboard Shortcuts" style={{ width: 360 }} usePortal={false} backdropProps={{ style: { backgroundColor: 'rgba(100,110,130,0.25)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } }}>
-        <div style={{ padding: '12px 20px' }}>
-          {SHORTCUTS.map(([key, desc]) => (
-            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{desc}</span>
-              <kbd style={{
-                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                borderRadius: 4, padding: '2px 8px', fontSize: 12,
-                fontFamily: "'Source Code Pro', monospace"
-              }}>{key}</kbd>
-            </div>
-          ))}
-        </div>
-      </Dialog>
+      <Modal isOpen={showHelp} onClose={() => setShowHelp(false)} title="Keyboard Shortcuts" width={360}>
+        {SHORTCUTS.map(([key, desc]) => (
+          <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{desc}</span>
+            <kbd style={{
+              background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+              borderRadius: 4, padding: '2px 8px', fontSize: 12,
+              fontFamily: "'Source Code Pro', monospace"
+            }}>{key}</kbd>
+          </div>
+        ))}
+      </Modal>
     </>
   )
 }

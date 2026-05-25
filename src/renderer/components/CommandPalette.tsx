@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { Dialog, InputGroup, Menu, MenuItem } from '@blueprintjs/core'
 import type { K8sResource } from '../../shared/types'
 
 interface CommandPaletteProps {
@@ -37,7 +36,9 @@ export function CommandPalette({ isOpen, onClose, resources, onSelect }: Command
   }, [query])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'Escape') {
+      onClose()
+    } else if (e.key === 'ArrowDown') {
       e.preventDefault()
       setActiveIndex((i) => Math.min(i + 1, filtered.length - 1))
     } else if (e.key === 'ArrowUp') {
@@ -49,67 +50,59 @@ export function CommandPalette({ isOpen, onClose, resources, onSelect }: Command
     }
   }
 
+  if (!isOpen) return null
+
   return (
-    <Dialog
-      isOpen={isOpen}
-      onClose={onClose}
-      canOutsideClickClose
-      canEscapeKeyClose
-      usePortal={false}
-      backdropProps={{ style: { backgroundColor: 'rgba(100,110,130,0.25)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } }}
-      style={{ width: 560, paddingBottom: 0, borderRadius: 8 }}
-    >
-      <div style={{ padding: 0 }}>
-        <InputGroup
-          inputRef={inputRef}
-          leftIcon="search"
-          placeholder="Search resources across all clusters..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          large
-          style={{ borderRadius: '8px 8px 0 0' }}
-        />
+    <div className="horus-modal-overlay" onClick={onClose}>
+      <div className="horus-modal palette-modal" style={{ width: 560 }} onClick={(e) => e.stopPropagation()}>
+        <div className="palette-input-wrap">
+          <svg width="16" height="16" viewBox="0 0 16 16" style={{ opacity: 0.4 }}>
+            <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <input
+            ref={inputRef}
+            className="palette-input"
+            placeholder="Search resources across all clusters..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+        </div>
         {filtered.length > 0 && (
-          <Menu style={{ maxHeight: 320, overflow: 'auto', borderRadius: '0 0 8px 8px' }}>
+          <div className="palette-results">
             {filtered.map((resource, i) => (
-              <MenuItem
+              <div
                 key={resource.uid}
-                text={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                      background: HEALTH_DOT[resource.health] ?? HEALTH_DOT.unknown
-                    }} />
-                    <span>{resource.name}</span>
-                    <span style={{ fontSize: 11, opacity: 0.5, marginLeft: 'auto' }}>{resource.namespace}</span>
-                  </div>
-                }
-                label={resource.cluster}
-                icon={kindToIcon(resource.kind)}
-                active={i === activeIndex}
+                className={`palette-item ${i === activeIndex ? 'palette-item-active' : ''}`}
                 onClick={() => { onSelect(resource); onClose() }}
-                roleStructure="listoption"
-              />
+                onMouseEnter={() => setActiveIndex(i)}
+              >
+                <span className="palette-dot" style={{ background: HEALTH_DOT[resource.health] ?? HEALTH_DOT.unknown }} />
+                <span className="palette-icon">{kindToIcon(resource.kind)}</span>
+                <span className="palette-name monospace">{resource.name}</span>
+                <span className="palette-ns monospace">{resource.namespace}</span>
+                <span className="palette-cluster">{resource.cluster}</span>
+              </div>
             ))}
-          </Menu>
+          </div>
         )}
         {query.length > 0 && filtered.length === 0 && (
-          <div style={{ padding: '12px 16px', opacity: 0.5 }}>No matching resources</div>
+          <div style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: 13 }}>No matching resources</div>
         )}
       </div>
-    </Dialog>
+    </div>
   )
 }
 
 function kindToIcon(kind: string): string {
   switch (kind) {
-    case 'Pod': return 'cube'
-    case 'Deployment': return 'layers'
-    case 'Service': return 'globe-network'
-    case 'Job': return 'play'
-    case 'StatefulSet': return 'database'
-    case 'DaemonSet': return 'grid-view'
-    default: return 'box'
+    case 'Pod': return '■'
+    case 'Deployment': return '▣'
+    case 'Service': return '◉'
+    case 'Job': return '▶'
+    case 'StatefulSet': return '▦'
+    case 'DaemonSet': return '▤'
+    default: return '▫'
   }
 }
