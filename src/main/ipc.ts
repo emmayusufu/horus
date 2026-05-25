@@ -10,6 +10,28 @@ import { generateSnapshot } from './k8s/snapshot'
 import type { ClusterInfo, K8sEvent, ResourceDetail, ResourceUpdate } from '../shared/types'
 import { writeFileSync } from 'fs'
 
+function toContainerStateInfo(
+  cs: { name: string; ready: boolean; state?: { waiting?: { reason?: string }; running?: Record<string, unknown>; terminated?: { reason?: string; exitCode?: number } } },
+  isInit: boolean
+): import('../shared/types').ContainerStateInfo {
+  let state: 'waiting' | 'running' | 'terminated' = 'waiting'
+  let reason: string | undefined
+  let exitCode: number | undefined
+
+  if (cs.state?.running) {
+    state = 'running'
+  } else if (cs.state?.terminated) {
+    state = 'terminated'
+    reason = cs.state.terminated.reason
+    exitCode = cs.state.terminated.exitCode
+  } else if (cs.state?.waiting) {
+    state = 'waiting'
+    reason = cs.state.waiting.reason
+  }
+
+  return { name: cs.name, state, ready: cs.ready, reason, exitCode, isInit }
+}
+
 const cache = new ResourceCache()
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
@@ -120,6 +142,24 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       kind === 'Pod' ? fetchPodMetrics(cluster, namespace, name) : Promise.resolve(null)
     ])
 
+    let conditions: import('../shared/types').PodCondition[] | undefined
+    let containers: import('../shared/types').ContainerStateInfo[] | undefined
+
+    if (kind === 'Pod') {
+      const pod = await client.coreApi.readNamespacedPod({ name, namespace })
+
+      conditions = (pod.status?.conditions ?? []).map((c) => ({
+        type: c.type,
+        status: c.status as 'True' | 'False' | 'Unknown',
+        reason: c.reason,
+        message: c.message
+      }))
+
+      const initStatuses = (pod.status?.initContainerStatuses ?? []).map((cs) => toContainerStateInfo(cs, true))
+      const regularStatuses = (pod.status?.containerStatuses ?? []).map((cs) => toContainerStateInfo(cs, false))
+      containers = [...initStatuses, ...regularStatuses]
+    }
+
     const helm = parseHelmLabels(resource.labels)
 
     const detail: ResourceDetail = {
@@ -132,7 +172,9 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
         metricsAvailable: client.metricsAvailable
       },
       related,
-      helm: helm ?? undefined
+      helm: helm ?? undefined,
+      conditions,
+      containers
     }
 
     return detail
