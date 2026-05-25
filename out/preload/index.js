@@ -32,6 +32,11 @@ electron.contextBridge.exposeInMainWorld("horus", {
 	getNetworkPolicies: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-network-policies", cluster, namespace),
 	getSecurityScan: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-security-scan", cluster, namespace),
 	getSecretUsage: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-secret-usage", cluster, namespace),
+	deletePod: (cluster, namespace, name) => electron.ipcRenderer.invoke("k8s:delete-pod", cluster, namespace, name),
+	scaleDeploy: (cluster, namespace, name, replicas) => electron.ipcRenderer.invoke("k8s:scale-deploy", cluster, namespace, name, replicas),
+	startPortForward: (cluster, namespace, pod, localPort, remotePort) => electron.ipcRenderer.invoke("k8s:start-port-forward", cluster, namespace, pod, localPort, remotePort),
+	stopPortForward: (id) => electron.ipcRenderer.invoke("k8s:stop-port-forward", id),
+	getGlobalEvents: (cluster, query) => electron.ipcRenderer.invoke("k8s:get-global-events", cluster, query),
 	onLogChunk: (callback) => {
 		const handler = (_event, chunk) => callback(chunk);
 		electron.ipcRenderer.on("k8s:log-chunk", handler);

@@ -24,6 +24,8 @@ let electron = require("electron");
 let path = require("path");
 let _kubernetes_client_node = require("@kubernetes/client-node");
 _kubernetes_client_node = __toESM(_kubernetes_client_node);
+let net = require("net");
+net = __toESM(net);
 let stream = require("stream");
 let fs = require("fs");
 //#region node_modules/@electron-toolkit/utils/dist/index.mjs
@@ -1126,6 +1128,53 @@ function registerIpcHandlers(mainWindow) {
 				referencedBy: referencedBy.slice(0, 10)
 			};
 		});
+	});
+	electron.ipcMain.handle("k8s:delete-pod", async (_event, cluster, namespace, name) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		await client.coreApi.deleteNamespacedPod({
+			name,
+			namespace
+		});
+	});
+	electron.ipcMain.handle("k8s:scale-deploy", async (_event, cluster, namespace, name, replicas) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		await client.appsApi.patchNamespacedDeploymentScale({
+			name,
+			namespace,
+			body: { spec: { replicas } }
+		});
+	});
+	const portForwards = /* @__PURE__ */ new Map();
+	let pfCounter = 0;
+	electron.ipcMain.handle("k8s:start-port-forward", async (_event, cluster, namespace, pod, localPort, remotePort) => {
+		const kc = getKubeConfig(cluster);
+		const forward = new _kubernetes_client_node.PortForward(kc);
+		const id = `pf-${++pfCounter}`;
+		const server = net.createServer((socket) => {
+			forward.portForward(namespace, pod, [remotePort], socket, null, socket);
+		});
+		server.listen(localPort, "127.0.0.1");
+		portForwards.set(id, server);
+		return id;
+	});
+	electron.ipcMain.handle("k8s:stop-port-forward", (_event, id) => {
+		const server = portForwards.get(id);
+		if (server) {
+			server.close();
+			portForwards.delete(id);
+		}
+	});
+	electron.ipcMain.handle("k8s:get-global-events", async (_event, cluster, query) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const events = await client.coreApi.listEventForAllNamespaces();
+		const lower = query.toLowerCase();
+		return events.items.filter((e) => {
+			if (!query) return true;
+			return e.reason?.toLowerCase().includes(lower) || e.message?.toLowerCase().includes(lower) || e.involvedObject?.name?.toLowerCase().includes(lower) || e.involvedObject?.namespace?.toLowerCase().includes(lower);
+		}).map(mapEvent).sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 200);
 	});
 }
 //#endregion

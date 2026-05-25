@@ -7,6 +7,10 @@ import { HPAStatus } from '../components/HPAStatus'
 import { PVCList } from '../components/PVCList'
 import { QuotaView } from '../components/QuotaView'
 import { ConfigChecks } from '../components/ConfigChecks'
+import { TopologyMap } from '../components/TopologyMap'
+import { CostView } from '../components/CostView'
+import { HelmReleases } from '../components/HelmReleases'
+import { SizingRecs } from '../components/SizingRecs'
 import { parseHelmLabels } from '../../shared/helm'
 import type { K8sResource, ResourceKind } from '../../shared/types'
 
@@ -121,15 +125,25 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
       </div>
       {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
       {showInsights && namespace !== 'all' && (
+        <div style={{ marginBottom: 12 }}>
+          <TopologyMap cluster={cluster} namespace={namespace} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <HPAStatus cluster={cluster} namespace={namespace} />
+              <QuotaView cluster={cluster} namespace={namespace} />
+              <SizingRecs cluster={cluster} namespace={namespace} />
+            </div>
+            <div>
+              <PVCList cluster={cluster} namespace={namespace} />
+              <ConfigChecks cluster={cluster} namespace={namespace} />
+            </div>
+          </div>
+        </div>
+      )}
+      {showInsights && namespace === 'all' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <div>
-            <HPAStatus cluster={cluster} namespace={namespace} />
-            <QuotaView cluster={cluster} namespace={namespace} />
-          </div>
-          <div>
-            <PVCList cluster={cluster} namespace={namespace} />
-            <ConfigChecks cluster={cluster} namespace={namespace} />
-          </div>
+          <CostView cluster={cluster} />
+          <HelmReleases cluster={cluster} />
         </div>
       )}
       {helmInfo && <HelmBanner helm={helmInfo} />}

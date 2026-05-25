@@ -17,7 +17,13 @@ import type {
   RBACBinding,
   NetworkPolicySummary,
   SecurityIssue,
-  SecretUsage
+  SecretUsage,
+  RootCause,
+  TopologyNode,
+  TopologyEdge,
+  CostEstimate,
+  HelmRelease,
+  SizingRec
 } from '../../shared/types'
 
 export function useK8s() {
@@ -64,6 +70,11 @@ export function useK8s() {
     scaleDeploy: (cluster: string, ns: string, name: string, replicas: number): Promise<void> => api.scaleDeploy(cluster, ns, name, replicas),
     startPortForward: (cluster: string, ns: string, pod: string, localPort: number, remotePort: number): Promise<string> => api.startPortForward(cluster, ns, pod, localPort, remotePort),
     stopPortForward: (id: string): Promise<void> => api.stopPortForward(id),
-    getGlobalEvents: (cluster: string, query: string): Promise<K8sEvent[]> => api.getGlobalEvents(cluster, query)
+    getGlobalEvents: (cluster: string, query: string): Promise<K8sEvent[]> => api.getGlobalEvents(cluster, query),
+    analyzeRootCause: (cluster: string, ns: string, name: string, kind: string): Promise<RootCause> => api.analyzeRootCause(cluster, ns, name, kind),
+    getTopology: (cluster: string, ns: string): Promise<{ nodes: TopologyNode[]; edges: TopologyEdge[] }> => api.getTopology(cluster, ns),
+    getCostEstimates: (cluster: string): Promise<CostEstimate[]> => api.getCostEstimates(cluster),
+    getHelmReleases: (cluster: string): Promise<HelmRelease[]> => api.getHelmReleases(cluster),
+    getSizingRecs: (cluster: string, ns: string): Promise<SizingRec[]> => api.getSizingRecs(cluster, ns)
   }
 }

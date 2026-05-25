@@ -223,6 +223,56 @@ export interface SecretUsage {
   referencedBy: string[]
 }
 
+export interface RootCause {
+  summary: string
+  confidence: 'high' | 'medium' | 'low'
+  evidence: string[]
+  suggestion: string
+}
+
+export interface TopologyNode {
+  id: string
+  kind: string
+  name: string
+  health: HealthStatus
+}
+
+export interface TopologyEdge {
+  from: string
+  to: string
+  label?: string
+}
+
+export interface CostEstimate {
+  namespace: string
+  cpuCores: number
+  memoryGB: number
+  monthlyCost: number
+  pods: number
+}
+
+export interface HelmRelease {
+  name: string
+  namespace: string
+  chart: string
+  version: string
+  revision: number
+  status: string
+  updated: string
+}
+
+export interface SizingRec {
+  pod: string
+  namespace: string
+  container: string
+  cpuRequest: string
+  cpuActual: string
+  memRequest: string
+  memActual: string
+  cpuSaving: string
+  memSaving: string
+}
+
 export interface PortForward {
   id: string
   cluster: string
@@ -277,6 +327,11 @@ export interface HorusAPI {
   startPortForward: (cluster: string, namespace: string, pod: string, localPort: number, remotePort: number) => Promise<string>
   stopPortForward: (id: string) => Promise<void>
   getGlobalEvents: (cluster: string, query: string) => Promise<K8sEvent[]>
+  analyzeRootCause: (cluster: string, namespace: string, name: string, kind: string) => Promise<RootCause>
+  getTopology: (cluster: string, namespace: string) => Promise<{ nodes: TopologyNode[]; edges: TopologyEdge[] }>
+  getCostEstimates: (cluster: string) => Promise<CostEstimate[]>
+  getHelmReleases: (cluster: string) => Promise<HelmRelease[]>
+  getSizingRecs: (cluster: string, namespace: string) => Promise<SizingRec[]>
 }
 
 declare global {

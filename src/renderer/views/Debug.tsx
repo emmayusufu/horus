@@ -13,6 +13,7 @@ import { CronJobRuns } from '../components/CronJobRuns'
 import { TrafficPath } from '../components/TrafficPath'
 import { PodActions } from '../components/PodActions'
 import { PortForwardPanel } from '../components/PortForwardPanel'
+import { RootCausePanel } from '../components/RootCausePanel'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -136,6 +137,9 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
         </div>
 
         <div className="debug-main">
+          {resource.health !== 'healthy' && (
+            <RootCausePanel cluster={resource.cluster} namespace={resource.namespace} name={resource.name} kind={resource.kind} />
+          )}
           <Timeline events={detail.events} />
           <LogViewer
             logs={detail.logs}
