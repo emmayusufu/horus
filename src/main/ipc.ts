@@ -2,7 +2,7 @@ import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { loadContexts, connectCluster, disconnectCluster, getClient } from './k8s/client'
 import { startWatching, stopWatching } from './k8s/watcher'
 import { ResourceCache } from './k8s/cache'
-import { fetchLogs } from './k8s/logs'
+import { fetchLogs, startLogStream, stopLogStream, stopAllLogStreams } from './k8s/logs'
 import { fetchRelated } from './k8s/related'
 import { fetchPodMetrics, checkMetricsAvailable } from './k8s/metrics'
 import { parseHelmLabels } from '../shared/helm'
@@ -55,6 +55,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   })
 
   ipcMain.handle('k8s:disconnect', async (_event, context: string) => {
+    stopAllLogStreams()
     stopWatching(context)
     disconnectCluster(context)
     cache.clear(context)
@@ -149,5 +150,16 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       return result.filePath
     }
     return null
+  })
+
+  ipcMain.handle('k8s:start-log-stream', (_event, cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => {
+    const streamId = startLogStream(cluster, namespace, pod, container, timestamps ?? false, (data) => {
+      mainWindow.webContents.send('k8s:log-chunk', { streamId, data })
+    })
+    return streamId
+  })
+
+  ipcMain.handle('k8s:stop-log-stream', (_event, streamId: string) => {
+    stopLogStream(streamId)
   })
 }

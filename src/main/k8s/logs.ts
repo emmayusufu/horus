@@ -1,5 +1,7 @@
+import * as k8s from '@kubernetes/client-node'
+import { PassThrough } from 'stream'
 import type { ContainerLogs } from '../../shared/types'
-import { getClient } from './client'
+import { getClient, getKubeConfig } from './client'
 
 export async function fetchLogs(
   context: string,
@@ -64,4 +66,56 @@ async function fetchContainerLogs(
   }
 
   return { containerName, current, previous }
+}
+
+const activeStreams = new Map<string, PassThrough>()
+let streamCounter = 0
+
+export function startLogStream(
+  context: string,
+  namespace: string,
+  podName: string,
+  containerName: string,
+  timestamps: boolean,
+  onChunk: (data: string) => void
+): string {
+  const streamId = `stream-${++streamCounter}`
+  const kc = getKubeConfig(context)
+  const log = new k8s.Log(kc)
+
+  const passthrough = new PassThrough()
+  activeStreams.set(streamId, passthrough)
+
+  passthrough.on('data', (chunk: Buffer) => {
+    onChunk(chunk.toString('utf-8'))
+  })
+
+  passthrough.on('error', () => {
+    activeStreams.delete(streamId)
+  })
+
+  log.log(namespace, podName, containerName, passthrough, {
+    follow: true,
+    tailLines: 200,
+    timestamps
+  }).catch(() => {
+    activeStreams.delete(streamId)
+  })
+
+  return streamId
+}
+
+export function stopLogStream(streamId: string): void {
+  const stream = activeStreams.get(streamId)
+  if (stream) {
+    stream.destroy()
+    activeStreams.delete(streamId)
+  }
+}
+
+export function stopAllLogStreams(): void {
+  for (const [, stream] of activeStreams) {
+    stream.destroy()
+  }
+  activeStreams.clear()
 }
