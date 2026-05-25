@@ -168,6 +168,10 @@ body.horus-dark {
   .bp6-callout {
     background: var(--bg-elevated) !important;
   }
+
+  .bp6-overlay-backdrop {
+    background: rgba(0, 0, 0, 0.55) !important;
+  }
 }
 
 .horus-light {

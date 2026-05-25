@@ -692,19 +692,20 @@ function registerIpcHandlers(mainWindow) {
 		if (!resource) throw new Error(`Resource not found: ${kind}/${name}`);
 		const client = getClient(cluster);
 		if (!client) throw new Error(`Not connected to ${cluster}`);
-		const filteredEvents = (await client.coreApi.listNamespacedEvent({ namespace })).items.filter((e) => e.involvedObject?.name === name).map(mapEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-		const [logs, related, metrics] = await Promise.all([
+		const [eventsResult, logs, related, metrics, pod] = await Promise.all([
+			client.coreApi.listNamespacedEvent({ namespace }),
 			kind === "Pod" ? fetchLogs(cluster, namespace, name) : Promise.resolve([]),
 			fetchRelated(cluster, namespace, name, kind),
-			kind === "Pod" ? fetchPodMetrics(cluster, namespace, name) : Promise.resolve(null)
-		]);
-		let conditions;
-		let containers;
-		if (kind === "Pod") {
-			const pod = await client.coreApi.readNamespacedPod({
+			kind === "Pod" ? fetchPodMetrics(cluster, namespace, name) : Promise.resolve(null),
+			kind === "Pod" ? client.coreApi.readNamespacedPod({
 				name,
 				namespace
-			});
+			}) : Promise.resolve(null)
+		]);
+		const filteredEvents = eventsResult.items.filter((e) => e.involvedObject?.name === name).map(mapEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+		let conditions;
+		let containers;
+		if (pod) {
 			conditions = (pod.status?.conditions ?? []).map((c) => ({
 				type: c.type,
 				status: c.status,
