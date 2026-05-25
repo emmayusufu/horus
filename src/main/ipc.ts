@@ -194,6 +194,31 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return null
   })
 
+  ipcMain.handle('k8s:get-pod-yaml', async (_event, cluster: string, namespace: string, name: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+    const pod = await client.coreApi.readNamespacedPod({ name, namespace })
+    return JSON.stringify(pod, null, 2)
+  })
+
+  ipcMain.handle('k8s:get-namespace-events', async (_event, cluster: string, namespace: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    const events = await client.coreApi.listNamespacedEvent({ namespace })
+    return events.items
+      .map((e): K8sEvent => ({
+        timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? '',
+        type: e.type ?? 'Normal',
+        reason: e.reason ?? '',
+        message: e.message ?? '',
+        involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
+        count: e.count ?? 1,
+        source: e.source?.component ?? ''
+      }))
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+  })
+
   ipcMain.handle('k8s:start-log-stream', (_event, cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => {
     const streamId = startLogStream(cluster, namespace, pod, container, timestamps ?? false, (data) => {
       mainWindow.webContents.send('k8s:log-chunk', { streamId, data })

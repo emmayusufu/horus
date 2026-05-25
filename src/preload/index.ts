@@ -16,6 +16,8 @@ const api: HorusAPI = {
   getHelmInfo: (cluster, namespace, labels) => ipcRenderer.invoke('k8s:helm-info', cluster, namespace, labels),
   getResourceDetail: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:get-resource-detail', cluster, namespace, name, kind),
   exportSnapshot: (detail) => ipcRenderer.invoke('k8s:export-snapshot', detail),
+  getPodYaml: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-pod-yaml', cluster, namespace, name),
+  getNamespaceEvents: (cluster, namespace) => ipcRenderer.invoke('k8s:get-namespace-events', cluster, namespace),
   startLogStream: (cluster, namespace, pod, container, timestamps) =>
     ipcRenderer.invoke('k8s:start-log-stream', cluster, namespace, pod, container, timestamps),
   stopLogStream: (streamId) => ipcRenderer.invoke('k8s:stop-log-stream', streamId),
