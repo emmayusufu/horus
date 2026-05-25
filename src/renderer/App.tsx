@@ -4,11 +4,18 @@ import { CommandPalette } from './components/CommandPalette'
 import { Overview } from './views/Overview'
 import { Explore } from './views/Explore'
 import { Debug } from './views/Debug'
+import { NodeView } from './views/NodeView'
+import { DiffView } from './views/DiffView'
 import { useResources } from './hooks/useResources'
 import { useK8s } from './hooks/useK8s'
 import type { K8sResource } from '../shared/types'
 
-type View = { type: 'overview' } | { type: 'explore'; cluster: string } | { type: 'debug'; resource: K8sResource }
+type View =
+  | { type: 'overview' }
+  | { type: 'explore'; cluster: string }
+  | { type: 'debug'; resource: K8sResource }
+  | { type: 'nodes'; cluster: string }
+  | { type: 'diff' }
 
 export function App() {
   const [view, setView] = useState<View>({ type: 'overview' })
@@ -40,6 +47,7 @@ export function App() {
       }
       if (e.key === 'Escape' && view.type !== 'overview') {
         if (view.type === 'debug') setView({ type: 'explore', cluster: view.resource.cluster })
+        else if (view.type === 'nodes') setView({ type: 'explore', cluster: view.cluster })
         else setView({ type: 'overview' })
       }
     }
@@ -68,6 +76,10 @@ export function App() {
   if (view.type === 'explore') {
     breadcrumbs.push({ text: view.cluster })
   }
+  if (view.type === 'nodes') {
+    breadcrumbs.push({ text: view.cluster, onClick: () => setView({ type: 'explore', cluster: view.cluster }) })
+    breadcrumbs.push({ text: 'Nodes' })
+  }
   if (view.type === 'debug') {
     breadcrumbs.push({
       text: view.resource.cluster,
@@ -75,10 +87,20 @@ export function App() {
     })
     breadcrumbs.push({ text: view.resource.name })
   }
+  if (view.type === 'diff') {
+    breadcrumbs.push({ text: 'Compare' })
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <TopBar breadcrumbs={breadcrumbs} onCommandPalette={() => setPaletteOpen(true)} darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
+      <TopBar
+        breadcrumbs={breadcrumbs}
+        onCommandPalette={() => setPaletteOpen(true)}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode(!darkMode)}
+        showCompare={clusters.length >= 2}
+        onCompare={() => setView({ type: 'diff' })}
+      />
       <CommandPalette
         isOpen={paletteOpen}
         onClose={() => setPaletteOpen(false)}
@@ -99,6 +121,7 @@ export function App() {
           cluster={view.cluster}
           resources={resourcesByCluster.get(view.cluster) ?? []}
           onSelectResource={handleSelectResource}
+          onShowNodes={() => setView({ type: 'nodes', cluster: view.cluster })}
         />
       )}
       {view.type === 'debug' && (
@@ -106,6 +129,21 @@ export function App() {
           resource={view.resource}
           onBack={() => setView({ type: 'explore', cluster: view.resource.cluster })}
           onNavigate={handleNavigateOwner}
+        />
+      )}
+      {view.type === 'nodes' && (
+        <NodeView
+          cluster={view.cluster}
+          resources={resourcesByCluster.get(view.cluster) ?? []}
+          onBack={() => setView({ type: 'explore', cluster: view.cluster })}
+          onSelectResource={handleSelectResource}
+        />
+      )}
+      {view.type === 'diff' && (
+        <DiffView
+          clusters={clusters.map((c) => c.name)}
+          resources={allResources()}
+          onBack={() => setView({ type: 'overview' })}
         />
       )}
     </div>

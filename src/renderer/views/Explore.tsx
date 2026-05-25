@@ -10,6 +10,7 @@ interface ExploreProps {
   cluster: string
   resources: K8sResource[]
   onSelectResource: (resource: K8sResource) => void
+  onShowNodes?: () => void
 }
 
 const KINDS: ResourceKind[] = [
@@ -18,6 +19,7 @@ const KINDS: ResourceKind[] = [
   'StatefulSet',
   'DaemonSet',
   'Job',
+  'CronJob',
   'Service',
   'Ingress',
   'ConfigMap',
@@ -37,7 +39,7 @@ function formatAge(isoTimestamp: string): string {
   return `${days}d`
 }
 
-export function Explore({ cluster, resources, onSelectResource }: ExploreProps) {
+export function Explore({ cluster, resources, onSelectResource, onShowNodes }: ExploreProps) {
   const [namespace, setNamespace] = useState<string>('all')
   const [kind, setKind] = useState<ResourceKind | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -99,6 +101,7 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
             onClick={() => setShowEvents(!showEvents)}
           />
         )}
+        {onShowNodes && <Button small icon="cloud" text="Nodes" onClick={onShowNodes} />}
       </div>
       {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
       {helmInfo && <HelmBanner helm={helmInfo} />}

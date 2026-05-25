@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, H5, HTMLSelect, Button, Spinner, NonIdealState } from '@blueprintjs/core'
+import { Card, H5, HTMLSelect, Button, NonIdealState } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource } from '../../shared/types'
 

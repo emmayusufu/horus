@@ -23,6 +23,10 @@ const api: HorusAPI = {
   startLogStream: (cluster, namespace, pod, container, timestamps) =>
     ipcRenderer.invoke('k8s:start-log-stream', cluster, namespace, pod, container, timestamps),
   stopLogStream: (streamId) => ipcRenderer.invoke('k8s:stop-log-stream', streamId),
+  getRollout: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-rollout', cluster, namespace, name),
+  getNodes: (cluster) => ipcRenderer.invoke('k8s:get-nodes', cluster),
+  getCronJobRuns: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-cronjob-runs', cluster, namespace, name),
+  getResourceYaml: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:get-resource-yaml', cluster, namespace, name, kind),
   onLogChunk: (callback) => {
     const handler = (_event: any, chunk: any) => callback(chunk)
     ipcRenderer.on('k8s:log-chunk', handler)

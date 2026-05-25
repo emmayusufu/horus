@@ -8,6 +8,8 @@ import { HelmBanner } from '../components/HelmBanner'
 import { PodConditions } from '../components/PodConditions'
 import { ContainerStates } from '../components/ContainerStates'
 import { PodYamlView } from '../components/PodYamlView'
+import { RolloutStatus } from '../components/RolloutStatus'
+import { CronJobRuns } from '../components/CronJobRuns'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -136,6 +138,12 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
             namespace={resource.namespace}
             podName={resource.name}
           />
+          {resource.kind === 'Deployment' && (
+            <RolloutStatus cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
+          )}
+          {resource.kind === 'CronJob' && (
+            <CronJobRuns cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
+          )}
           {resource.kind === 'Pod' && (
             <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
           )}

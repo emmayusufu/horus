@@ -250,4 +250,111 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('k8s:stop-log-stream', (_event, streamId: string) => {
     stopLogStream(streamId)
   })
+
+  ipcMain.handle('k8s:get-rollout', async (_event, cluster: string, namespace: string, name: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    const dep = await client.appsApi.readNamespacedDeployment({ name, namespace })
+    const rsResult = await client.appsApi.listNamespacedReplicaSet({ namespace })
+
+    const ownedRs = rsResult.items.filter(
+      (rs) => rs.metadata?.ownerReferences?.some((o) => o.name === name && o.kind === 'Deployment')
+    )
+
+    const currentRevision = dep.metadata?.annotations?.['deployment.kubernetes.io/revision'] ?? '0'
+
+    const replicaSets = ownedRs
+      .map((rs) => ({
+        name: rs.metadata?.name ?? '',
+        revision: rs.metadata?.annotations?.['deployment.kubernetes.io/revision'] ?? '0',
+        replicas: rs.status?.replicas ?? 0,
+        ready: rs.status?.readyReplicas ?? 0,
+        image: rs.spec?.template?.spec?.containers?.[0]?.image ?? '',
+        isCurrent: (rs.metadata?.annotations?.['deployment.kubernetes.io/revision'] ?? '0') === currentRevision
+      }))
+      .filter((rs) => rs.replicas > 0 || rs.isCurrent)
+      .sort((a, b) => parseInt(b.revision) - parseInt(a.revision))
+
+    return {
+      strategy: dep.spec?.strategy?.type ?? 'RollingUpdate',
+      maxSurge: dep.spec?.strategy?.rollingUpdate?.maxSurge?.toString(),
+      maxUnavailable: dep.spec?.strategy?.rollingUpdate?.maxUnavailable?.toString(),
+      replicas: dep.spec?.replicas ?? 0,
+      updatedReplicas: dep.status?.updatedReplicas ?? 0,
+      readyReplicas: dep.status?.readyReplicas ?? 0,
+      availableReplicas: dep.status?.availableReplicas ?? 0,
+      replicaSets
+    }
+  })
+
+  ipcMain.handle('k8s:get-nodes', async (_event, cluster: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    const nodes = await client.coreApi.listNode()
+    const pods = cache.getAll(cluster)
+
+    return nodes.items.map((n) => ({
+      name: n.metadata?.name ?? '',
+      conditions: (n.status?.conditions ?? []).map((c) => ({ type: c.type, status: c.status })),
+      capacity: {
+        cpu: n.status?.capacity?.cpu ?? '0',
+        memory: n.status?.capacity?.memory ?? '0',
+        pods: n.status?.capacity?.pods ?? '0'
+      },
+      allocatable: {
+        cpu: n.status?.allocatable?.cpu ?? '0',
+        memory: n.status?.allocatable?.memory ?? '0',
+        pods: n.status?.allocatable?.pods ?? '0'
+      },
+      taints: (n.spec?.taints ?? []).map((t) => ({ key: t.key, value: t.value, effect: t.effect })),
+      podCount: pods.filter((p) => p.node === n.metadata?.name).length,
+      labels: n.metadata?.labels ?? {}
+    }))
+  })
+
+  ipcMain.handle('k8s:get-cronjob-runs', async (_event, cluster: string, namespace: string, name: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    const jobs = await client.batchApi.listNamespacedJob({ namespace })
+    const owned = jobs.items
+      .filter((j) => j.metadata?.ownerReferences?.some((o) => o.name === name && o.kind === 'CronJob'))
+      .sort((a, b) => (b.metadata?.creationTimestamp?.getTime() ?? 0) - (a.metadata?.creationTimestamp?.getTime() ?? 0))
+      .slice(0, 15)
+
+    return owned.map((j) => {
+      const failed = j.status?.conditions?.find((c) => c.type === 'Failed' && c.status === 'True')
+      const complete = j.status?.conditions?.find((c) => c.type === 'Complete' && c.status === 'True')
+      const start = j.status?.startTime?.getTime() ?? 0
+      const end = j.status?.completionTime?.getTime() ?? Date.now()
+      const durationMs = start ? end - start : 0
+      const durationStr = durationMs < 60000 ? `${Math.round(durationMs / 1000)}s` : `${Math.round(durationMs / 60000)}m`
+
+      return {
+        name: j.metadata?.name ?? '',
+        status: failed ? 'Failed' as const : complete ? 'Complete' as const : 'Running' as const,
+        startTime: j.metadata?.creationTimestamp?.toISOString() ?? '',
+        duration: durationStr,
+        pods: (j.status?.active ?? 0) + (j.status?.succeeded ?? 0) + (j.status?.failed ?? 0)
+      }
+    })
+  })
+
+  ipcMain.handle('k8s:get-resource-yaml', async (_event, cluster: string, namespace: string, name: string, kind: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    let resource: any
+    switch (kind) {
+      case 'Pod': resource = await client.coreApi.readNamespacedPod({ name, namespace }); break
+      case 'Deployment': resource = await client.appsApi.readNamespacedDeployment({ name, namespace }); break
+      case 'Service': resource = await client.coreApi.readNamespacedService({ name, namespace }); break
+      case 'ConfigMap': resource = await client.coreApi.readNamespacedConfigMap({ name, namespace }); break
+      case 'Job': resource = await client.batchApi.readNamespacedJob({ name, namespace }); break
+      default: throw new Error(`Unsupported kind: ${kind}`)
+    }
+    return JSON.stringify(resource, null, 2)
+  })
 }

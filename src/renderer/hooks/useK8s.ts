@@ -5,7 +5,10 @@ import type {
   RelatedResource,
   HelmInfo,
   ResourceDetail,
-  LogChunk
+  LogChunk,
+  RolloutInfo,
+  NodeInfo,
+  CronJobRun
 } from '../../shared/types'
 
 export function useK8s() {
@@ -34,6 +37,10 @@ export function useK8s() {
       timestamps?: boolean
     ): Promise<string> => api.startLogStream(cluster, ns, pod, container, timestamps),
     stopLogStream: (streamId: string): Promise<void> => api.stopLogStream(streamId),
-    onLogChunk: (callback: (chunk: LogChunk) => void): (() => void) => api.onLogChunk(callback)
+    onLogChunk: (callback: (chunk: LogChunk) => void): (() => void) => api.onLogChunk(callback),
+    getRollout: (cluster: string, ns: string, name: string): Promise<RolloutInfo> => api.getRollout(cluster, ns, name),
+    getNodes: (cluster: string): Promise<NodeInfo[]> => api.getNodes(cluster),
+    getCronJobRuns: (cluster: string, ns: string, name: string): Promise<CronJobRun[]> => api.getCronJobRuns(cluster, ns, name),
+    getResourceYaml: (cluster: string, ns: string, name: string, kind: string): Promise<string> => api.getResourceYaml(cluster, ns, name, kind)
   }
 }

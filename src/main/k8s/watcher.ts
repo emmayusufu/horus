@@ -82,6 +82,28 @@ function jobToResource(job: k8s.V1Job, cluster: string): K8sResource {
   }
 }
 
+function cronJobToResource(cj: k8s.V1CronJob, cluster: string): K8sResource {
+  const suspended = cj.spec?.suspend ?? false
+  const lastSchedule = cj.status?.lastScheduleTime?.toISOString() ?? ''
+  const status = suspended ? 'Suspended' : lastSchedule ? 'Active' : 'Pending'
+
+  return {
+    uid: cj.metadata?.uid ?? '',
+    name: cj.metadata?.name ?? '',
+    namespace: cj.metadata?.namespace ?? '',
+    kind: 'CronJob',
+    cluster,
+    status,
+    health: suspended ? 'warning' : 'healthy',
+    restarts: 0,
+    age: cj.metadata?.creationTimestamp?.toISOString() ?? '',
+    node: '-',
+    labels: cj.metadata?.labels ?? {},
+    ownerKind: undefined,
+    ownerName: undefined
+  }
+}
+
 export async function startWatching(context: string, onUpdate: WatchCallback): Promise<void> {
   const kc = getKubeConfig(context)
   const coreApi = kc.makeApiClient(k8s.CoreV1Api)
@@ -95,10 +117,11 @@ export async function startWatching(context: string, onUpdate: WatchCallback): P
   }
 
   try {
-    const [pods, deployments, jobs] = await Promise.all([
+    const [pods, deployments, jobs, cronJobs] = await Promise.all([
       coreApi.listPodForAllNamespaces(),
       appsApi.listDeploymentForAllNamespaces(),
-      batchApi.listJobForAllNamespaces()
+      batchApi.listJobForAllNamespaces(),
+      batchApi.listCronJobForAllNamespaces()
     ])
 
     for (const pod of pods.items) {
@@ -111,6 +134,10 @@ export async function startWatching(context: string, onUpdate: WatchCallback): P
     }
     for (const job of jobs.items) {
       const r = jobToResource(job, context)
+      resources.set(r.uid, r)
+    }
+    for (const cj of cronJobs.items) {
+      const r = cronJobToResource(cj, context)
       resources.set(r.uid, r)
     }
 
@@ -161,6 +188,7 @@ export async function startWatching(context: string, onUpdate: WatchCallback): P
   watchPath('/api/v1/pods', (obj) => podToResource(obj, context))
   watchPath('/apis/apps/v1/deployments', (obj) => deploymentToResource(obj, context))
   watchPath('/apis/batch/v1/jobs', (obj) => jobToResource(obj, context))
+  watchPath('/apis/batch/v1/cronjobs', (obj) => cronJobToResource(obj, context))
 
   activeWatches.set(context, watches)
 }

@@ -6,6 +6,7 @@ export type ResourceKind =
   | 'StatefulSet'
   | 'DaemonSet'
   | 'Job'
+  | 'CronJob'
   | 'Service'
   | 'Ingress'
   | 'ConfigMap'
@@ -107,6 +108,50 @@ export interface ResourceUpdate {
   clusterInfo: ClusterInfo
 }
 
+export interface RolloutInfo {
+  strategy: string
+  maxSurge?: string
+  maxUnavailable?: string
+  replicas: number
+  updatedReplicas: number
+  readyReplicas: number
+  availableReplicas: number
+  replicaSets: ReplicaSetInfo[]
+}
+
+export interface ReplicaSetInfo {
+  name: string
+  revision: string
+  replicas: number
+  ready: number
+  image: string
+  isCurrent: boolean
+}
+
+export interface NodeInfo {
+  name: string
+  conditions: { type: string; status: string }[]
+  capacity: { cpu: string; memory: string; pods: string }
+  allocatable: { cpu: string; memory: string; pods: string }
+  taints: { key: string; value?: string; effect: string }[]
+  podCount: number
+  labels: Record<string, string>
+}
+
+export interface CronJobRun {
+  name: string
+  status: 'Complete' | 'Failed' | 'Running'
+  startTime: string
+  duration: string
+  pods: number
+}
+
+export interface DiffResult {
+  path: string
+  left: string
+  right: string
+}
+
 export interface LogChunk {
   streamId: string
   data: string
@@ -134,6 +179,10 @@ export interface HorusAPI {
   onLogChunk: (callback: (chunk: LogChunk) => void) => () => void
   getPodYaml: (cluster: string, namespace: string, name: string) => Promise<string>
   getNamespaceEvents: (cluster: string, namespace: string) => Promise<K8sEvent[]>
+  getRollout: (cluster: string, namespace: string, name: string) => Promise<RolloutInfo>
+  getNodes: (cluster: string) => Promise<NodeInfo[]>
+  getCronJobRuns: (cluster: string, namespace: string, name: string) => Promise<CronJobRun[]>
+  getResourceYaml: (cluster: string, namespace: string, name: string, kind: string) => Promise<string>
 }
 
 declare global {
