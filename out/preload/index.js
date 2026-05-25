@@ -19,6 +19,10 @@ electron.contextBridge.exposeInMainWorld("horus", {
 	getNamespaceEvents: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-namespace-events", cluster, namespace),
 	startLogStream: (cluster, namespace, pod, container, timestamps) => electron.ipcRenderer.invoke("k8s:start-log-stream", cluster, namespace, pod, container, timestamps),
 	stopLogStream: (streamId) => electron.ipcRenderer.invoke("k8s:stop-log-stream", streamId),
+	getRollout: (cluster, namespace, name) => electron.ipcRenderer.invoke("k8s:get-rollout", cluster, namespace, name),
+	getNodes: (cluster) => electron.ipcRenderer.invoke("k8s:get-nodes", cluster),
+	getCronJobRuns: (cluster, namespace, name) => electron.ipcRenderer.invoke("k8s:get-cronjob-runs", cluster, namespace, name),
+	getResourceYaml: (cluster, namespace, name, kind) => electron.ipcRenderer.invoke("k8s:get-resource-yaml", cluster, namespace, name, kind),
 	onLogChunk: (callback) => {
 		const handler = (_event, chunk) => callback(chunk);
 		electron.ipcRenderer.on("k8s:log-chunk", handler);
