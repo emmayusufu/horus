@@ -83,7 +83,7 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
   }
 
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1, overflow: showInsights ? 'auto' : 'hidden' }}>
+    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1, overflow: tab === 'insights' ? 'auto' : 'hidden' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <HTMLSelect value={namespace} onChange={(e) => setNamespace(e.target.value)}>
           {namespaces.map((ns) => (
@@ -112,7 +112,6 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
       </div>
       {tab === 'resources' && (
         <>
-      {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
       {helmInfo && <HelmBanner helm={helmInfo} />}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Table2
