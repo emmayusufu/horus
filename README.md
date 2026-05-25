@@ -1,25 +1,37 @@
 # Horus
 
-Kubernetes incident debugger. When a pod crashes, instead of running kubectl logs/describe/get events/etc across 5+ clusters, open it in Horus and get everything on one screen.
+Kubernetes observability and incident debugger. When something breaks across your clusters, Horus shows you what's wrong and exactly where the problem is -- without running 10 kubectl commands.
 
 ## Features
 
-Five views: **Overview** (dashboard with health ring and charts), **Explore** (resource browser with filters), **Debug** (full context for one resource), **Nodes** (node health and pod distribution), **Compare** (multi-cluster diff).
+**Overview** -- health ring, pod heatmap, namespace comparison chart, cluster status
 
-The Debug view pulls together:
-- Streaming logs with search, level coloring, and timestamps
-- Init container logs
-- K8s events with source and repeat count
-- Pod conditions and container states
-- Deployment rollout progress with ReplicaSet breakdown
-- CronJob run history with pass/fail chart
-- CPU/memory usage (requires metrics-server)
-- Related services, ingress, configmaps, secrets
-- Helm release info
-- Raw pod spec (collapsible)
-- Exportable markdown snapshot
+**Explore** -- resource browser with filters. Switch to the Insights tab for service topology, ownership trees, dependency graphs, HPAs, PVCs, quotas, config health checks, and namespace events.
 
-Dark and light mode. Keyboard-driven: Cmd+K to search, Esc to go back, `l` to follow logs, `/` to search logs, `t` for timestamps.
+**Debug** -- full context for one resource on a single screen:
+- Root cause analysis (automatic diagnosis for crashes, scheduling failures, image pull errors)
+- Streaming logs with search, level coloring, timestamps, line numbers
+- Traffic path tracing (Ingress > LB > Service > Endpoints > Pods)
+- Deployment rollout progress with ReplicaSet chart
+- CronJob run history with pass/fail visualization
+- Pod lifecycle timeline and sidecar detection
+- Pod conditions, container states, resource usage
+- Related services, configmaps, secrets
+- Port forwarding, pod restart, deployment scaling
+- Helm release info and raw pod spec
+- Markdown snapshot export
+
+**Request Tracer** -- enter a hostname, trace the full request path hop-by-hop, find exactly where a 503 originates
+
+**Nodes** -- node health, capacity, taints, pod distribution per node
+
+**Security** -- RBAC bindings, network policy coverage, security posture scan, secret usage audit
+
+**Compare** -- side-by-side diff of the same resource across two clusters
+
+**Global Events** -- search events across all namespaces and clusters
+
+Dark and light mode. Keyboard-driven: Cmd+K to search, Esc to go back, `l` to follow logs, `/` to search, `t` for timestamps.
 
 ## Getting started
 
