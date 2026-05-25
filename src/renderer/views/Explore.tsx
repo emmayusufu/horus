@@ -11,6 +11,9 @@ import { TopologyMap } from '../components/TopologyMap'
 import { CostView } from '../components/CostView'
 import { HelmReleases } from '../components/HelmReleases'
 import { SizingRecs } from '../components/SizingRecs'
+import { OwnershipTree } from '../components/OwnershipTree'
+import { DependencyGraph } from '../components/DependencyGraph'
+import { NodeTopology } from '../components/NodeTopology'
 import { parseHelmLabels } from '../../shared/helm'
 import type { K8sResource, ResourceKind } from '../../shared/types'
 
@@ -129,11 +132,13 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
           <TopologyMap cluster={cluster} namespace={namespace} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
+              <OwnershipTree resources={filtered} onSelect={onSelectResource} />
               <HPAStatus cluster={cluster} namespace={namespace} />
               <QuotaView cluster={cluster} namespace={namespace} />
               <SizingRecs cluster={cluster} namespace={namespace} />
             </div>
             <div>
+              <DependencyGraph cluster={cluster} namespace={namespace} />
               <PVCList cluster={cluster} namespace={namespace} />
               <ConfigChecks cluster={cluster} namespace={namespace} />
             </div>
@@ -141,9 +146,13 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
         </div>
       )}
       {showInsights && namespace === 'all' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <CostView cluster={cluster} />
-          <HelmReleases cluster={cluster} />
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <CostView cluster={cluster} />
+            <HelmReleases cluster={cluster} />
+          </div>
+          <NodeTopology resources={resources} onSelect={onSelectResource} />
+          <OwnershipTree resources={resources} onSelect={onSelectResource} />
         </div>
       )}
       {helmInfo && <HelmBanner helm={helmInfo} />}

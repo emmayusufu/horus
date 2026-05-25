@@ -1,7 +1,7 @@
 appId: com.horus.app
 productName: Horus
 directories:
-  buildResources: build
+  buildResources: resources
 files:
   - "!**/.vscode/*"
   - "!src/*"
