@@ -74,22 +74,23 @@ html, body, #root {
   font-family: 'Source Code Pro', 'SF Mono', 'Cascadia Code', monospace !important;
 }
 
-// Blueprint dark overrides
-.horus-dark {
+// Blueprint dark overrides — body.horus-dark for specificity over Blueprint's .bp5-dark
+body.horus-dark {
   background: var(--bg-primary) !important;
   color: var(--text-primary) !important;
 
   #root {
-    background: var(--bg-primary);
+    background: var(--bg-primary) !important;
   }
 
-  .bp5-card {
+  .bp5-card, .bp5-card.bp5-elevation-0, .bp5-card.bp5-elevation-1 {
     background: var(--bg-card) !important;
     box-shadow: none !important;
     border: 1px solid var(--border);
+    color: var(--text-primary);
   }
 
-  .bp5-navbar {
+  .bp5-navbar, .bp5-dark .bp5-navbar {
     background: var(--bg-secondary) !important;
     box-shadow: 0 1px 0 var(--border) !important;
     color: var(--text-primary) !important;
@@ -149,6 +150,17 @@ html, body, #root {
 
   .bp5-non-ideal-state {
     color: var(--text-muted);
+  }
+
+  .bp5-overlay-content,
+  .bp5-popover,
+  .bp5-menu {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .bp5-callout {
+    background: var(--bg-elevated) !important;
   }
 }
 
