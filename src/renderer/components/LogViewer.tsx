@@ -148,7 +148,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
         style={{ maxHeight: 300, overflow: 'auto', margin: 0, padding: 8, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 4, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
       >
         {filteredLines.map((line, i) => (
-          <div key={i}>{highlightMatch(line.text, searchQuery)}</div>
+          <div key={i} style={getLogLevelStyle(line.text)}>{highlightMatch(line.text, searchQuery)}</div>
         ))}
         {filteredLines.length === 0 && <span className="bp5-text-muted">(no matching lines)</span>}
       </pre>
@@ -169,4 +169,18 @@ function highlightMatch(text: string, query: string): React.ReactNode {
       {text.slice(idx + query.length)}
     </>
   )
+}
+
+function getLogLevelStyle(text: string): React.CSSProperties | undefined {
+  const upper = text.toUpperCase()
+  if (upper.includes('ERROR') || upper.includes('FATAL') || upper.includes('PANIC')) {
+    return { color: '#F5498B' }
+  }
+  if (upper.includes('WARN')) {
+    return { color: '#FBB360' }
+  }
+  if (upper.includes('DEBUG') || upper.includes('TRACE')) {
+    return { color: '#8ABBFF', opacity: 0.7 }
+  }
+  return undefined
 }
