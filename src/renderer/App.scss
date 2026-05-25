@@ -76,6 +76,13 @@ html, body, #root {
 
 // Blueprint dark overrides
 .horus-dark {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+
+  #root {
+    background: var(--bg-primary);
+  }
+
   .bp5-card {
     background: var(--bg-card) !important;
     box-shadow: none !important;
@@ -85,6 +92,7 @@ html, body, #root {
   .bp5-navbar {
     background: var(--bg-secondary) !important;
     box-shadow: 0 1px 0 var(--border) !important;
+    color: var(--text-primary) !important;
   }
 
   .bp5-input,
