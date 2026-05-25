@@ -53,6 +53,22 @@ export interface ContainerLogs {
   isInit: boolean
 }
 
+export interface PodCondition {
+  type: string
+  status: 'True' | 'False' | 'Unknown'
+  reason?: string
+  message?: string
+}
+
+export interface ContainerStateInfo {
+  name: string
+  state: 'waiting' | 'running' | 'terminated'
+  ready: boolean
+  reason?: string
+  exitCode?: number
+  isInit: boolean
+}
+
 export interface ResourceDetail {
   resource: K8sResource
   events: K8sEvent[]
@@ -68,6 +84,8 @@ export interface ResourceDetail {
   }
   related: RelatedResource[]
   helm?: HelmInfo
+  conditions?: PodCondition[]
+  containers?: ContainerStateInfo[]
 }
 
 export interface RelatedResource {
@@ -108,6 +126,8 @@ export interface HorusAPI {
   startLogStream: (cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => Promise<string>
   stopLogStream: (streamId: string) => Promise<void>
   onLogChunk: (callback: (chunk: LogChunk) => void) => () => void
+  getPodYaml: (cluster: string, namespace: string, name: string) => Promise<string>
+  getNamespaceEvents: (cluster: string, namespace: string) => Promise<K8sEvent[]>
 }
 
 declare global {

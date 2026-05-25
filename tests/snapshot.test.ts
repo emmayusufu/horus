@@ -18,6 +18,15 @@ function makeDetail(overrides: Partial<ResourceDetail> = {}): ResourceDetail {
     resources: { cpuRequest: '250m', cpuLimit: '500m', memRequest: '256Mi', memLimit: '512Mi', metricsAvailable: false },
     related: [{ kind: 'Service', name: 'payment-svc', detail: '0/4 endpoints ready' }],
     helm: { chart: 'payment', version: '2.3.1', revision: 14, managedBy: 'Helm' },
+    conditions: [
+      { type: 'Ready', status: 'False' as const, reason: 'ContainersNotReady' },
+      { type: 'ContainersReady', status: 'False' as const },
+      { type: 'Initialized', status: 'True' as const },
+      { type: 'PodScheduled', status: 'True' as const }
+    ],
+    containers: [
+      { name: 'main', state: 'waiting' as const, ready: false, reason: 'CrashLoopBackOff', isInit: false }
+    ],
     ...overrides
   }
 }
