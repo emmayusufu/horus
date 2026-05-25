@@ -100,8 +100,10 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
     const next = !timestamps
     setTimestamps(next)
     if (!following && isPod) {
-      const refreshed = await k8s.getLogs(cluster, namespace, podName, next)
-      setCurrentLogs(refreshed)
+      try {
+        const refreshed = await k8s.getLogs(cluster, namespace, podName, next)
+        setCurrentLogs(refreshed)
+      } catch {}
     }
   }
 

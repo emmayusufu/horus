@@ -11,6 +11,8 @@ import { PodYamlView } from '../components/PodYamlView'
 import { RolloutStatus } from '../components/RolloutStatus'
 import { CronJobRuns } from '../components/CronJobRuns'
 import { TrafficPath } from '../components/TrafficPath'
+import { PodActions } from '../components/PodActions'
+import { PortForwardPanel } from '../components/PortForwardPanel'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -86,6 +88,7 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
             icon="clipboard"
             onClick={() => navigator.clipboard.writeText(`${resource.namespace}/${resource.name}`)}
           />
+          <PodActions cluster={resource.cluster} namespace={resource.namespace} name={resource.name} kind={resource.kind} />
         </div>
         <Button icon="export" text="Export" small onClick={handleExport} />
       </div>
@@ -129,6 +132,7 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
           <ResourceUsage {...detail.resources} />
           <RelatedList related={detail.related} />
           {detail.helm && <HelmBanner helm={detail.helm} />}
+          {resource.kind === 'Pod' && <PortForwardPanel cluster={resource.cluster} namespace={resource.namespace} podName={resource.name} />}
         </div>
 
         <div className="debug-main">

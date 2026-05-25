@@ -9,6 +9,7 @@ interface TopBarProps {
   onToggleDarkMode: () => void
   showCompare?: boolean
   onCompare?: () => void
+  onEvents?: () => void
 }
 
 const SHORTCUTS = [
@@ -19,7 +20,7 @@ const SHORTCUTS = [
   ['t', 'Toggle timestamps']
 ]
 
-export function TopBar({ breadcrumbs, onCommandPalette, darkMode, onToggleDarkMode, showCompare, onCompare }: TopBarProps) {
+export function TopBar({ breadcrumbs, onCommandPalette, darkMode, onToggleDarkMode, showCompare, onCompare, onEvents }: TopBarProps) {
   const [showHelp, setShowHelp] = useState(false)
 
   return (
@@ -30,6 +31,7 @@ export function TopBar({ breadcrumbs, onCommandPalette, darkMode, onToggleDarkMo
         </Navbar.Group>
         <Navbar.Group align="right" style={{ paddingRight: 8, gap: 2 }}>
           <Button minimal icon="search" text="Search... (Cmd+K)" onClick={onCommandPalette} />
+          {onEvents && <Button minimal icon="timeline-events" text="Events" onClick={onEvents} />}
           {showCompare && onCompare && <Button minimal icon="comparison" text="Compare" onClick={onCompare} />}
           <Button minimal icon="help" onClick={() => setShowHelp(true)} />
           <Button minimal icon={darkMode ? 'flash' : 'moon'} onClick={onToggleDarkMode} />

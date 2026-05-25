@@ -58,6 +58,7 @@ function connectCluster(context) {
 		batchApi: kc.makeApiClient(_kubernetes_client_node.BatchV1Api),
 		networkApi: kc.makeApiClient(_kubernetes_client_node.NetworkingV1Api),
 		autoscalingApi: kc.makeApiClient(_kubernetes_client_node.AutoscalingV2Api),
+		rbacApi: kc.makeApiClient(_kubernetes_client_node.RbacAuthorizationV1Api),
 		metricsAvailable: false
 	};
 	clients.set(context, client);
@@ -1044,6 +1045,87 @@ function registerIpcHandlers(mainWindow) {
 				issues
 			};
 		}).filter((c) => c.issues.length > 0);
+	});
+	electron.ipcMain.handle("k8s:get-rbac", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		return (await client.rbacApi.listNamespacedRoleBinding({ namespace })).items.map((b) => ({
+			name: b.metadata?.name ?? "",
+			role: b.roleRef?.name ?? "",
+			roleKind: b.roleRef?.kind ?? "",
+			subjects: (b.subjects ?? []).map((s) => ({
+				kind: s.kind,
+				name: s.name,
+				namespace: s.namespace
+			}))
+		}));
+	});
+	electron.ipcMain.handle("k8s:get-network-policies", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const policies = await client.networkApi.listNamespacedNetworkPolicy({ namespace });
+		const pods = cache.getAll(cluster).filter((p) => p.kind === "Pod" && p.namespace === namespace);
+		return policies.items.map((np) => {
+			const selector = np.spec?.podSelector?.matchLabels ?? {};
+			const matching = Object.keys(selector).length === 0 ? pods.length : pods.filter((p) => Object.entries(selector).every(([k, v]) => p.labels[k] === v)).length;
+			return {
+				name: np.metadata?.name ?? "",
+				podSelector: selector,
+				matchingPods: matching,
+				ingressRules: np.spec?.ingress?.length ?? 0,
+				egressRules: np.spec?.egress?.length ?? 0
+			};
+		});
+	});
+	electron.ipcMain.handle("k8s:get-security-scan", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const pods = await client.coreApi.listNamespacedPod({ namespace });
+		const netpols = await client.networkApi.listNamespacedNetworkPolicy({ namespace }).catch(() => ({ items: [] }));
+		return pods.items.map((pod) => {
+			const issues = [];
+			const labels = pod.metadata?.labels ?? {};
+			for (const c of pod.spec?.containers ?? []) {
+				if (c.image?.includes(":latest") || !c.image?.includes(":")) issues.push(`${c.name}: using :latest or untagged image`);
+				if (c.securityContext?.privileged) issues.push(`${c.name}: privileged container`);
+				if (c.securityContext?.runAsUser === 0) issues.push(`${c.name}: running as root`);
+			}
+			if (pod.spec?.hostNetwork) issues.push("hostNetwork enabled");
+			if (pod.spec?.automountServiceAccountToken !== false) {
+				if ((pod.spec?.serviceAccountName ?? "default") === "default") issues.push("using default service account");
+			}
+			if (!netpols.items.some((np) => {
+				const sel = np.spec?.podSelector?.matchLabels ?? {};
+				return Object.keys(sel).length === 0 || Object.entries(sel).every(([k, v]) => labels[k] === v);
+			})) issues.push("no network policy");
+			return {
+				pod: pod.metadata?.name ?? "",
+				namespace: pod.metadata?.namespace ?? "",
+				issues
+			};
+		}).filter((s) => s.issues.length > 0);
+	});
+	electron.ipcMain.handle("k8s:get-secret-usage", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const [secrets, pods] = await Promise.all([client.coreApi.listNamespacedSecret({ namespace }), client.coreApi.listNamespacedPod({ namespace })]);
+		return secrets.items.map((s) => {
+			const secretName = s.metadata?.name ?? "";
+			const referencedBy = [];
+			for (const pod of pods.items) if ([
+				...(pod.spec?.containers?.flatMap((c) => c.envFrom ?? []) ?? []).filter((e) => e.secretRef?.name === secretName),
+				...(pod.spec?.containers?.flatMap((c) => c.env ?? []) ?? []).filter((e) => e.valueFrom?.secretKeyRef?.name === secretName),
+				...(pod.spec?.volumes ?? []).filter((v) => v.secret?.secretName === secretName)
+			].length > 0) referencedBy.push(pod.metadata?.name ?? "");
+			const age = s.metadata?.creationTimestamp?.toISOString() ?? "";
+			return {
+				name: secretName,
+				namespace: s.metadata?.namespace ?? "",
+				type: s.type ?? "Opaque",
+				age,
+				referencedBy: referencedBy.slice(0, 10)
+			};
+		});
 	});
 }
 //#endregion

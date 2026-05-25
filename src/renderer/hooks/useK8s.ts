@@ -59,6 +59,11 @@ export function useK8s() {
     getRBAC: (cluster: string, ns: string): Promise<RBACBinding[]> => api.getRBAC(cluster, ns),
     getNetworkPolicies: (cluster: string, ns: string): Promise<NetworkPolicySummary[]> => api.getNetworkPolicies(cluster, ns),
     getSecurityScan: (cluster: string, ns: string): Promise<SecurityIssue[]> => api.getSecurityScan(cluster, ns),
-    getSecretUsage: (cluster: string, ns: string): Promise<SecretUsage[]> => api.getSecretUsage(cluster, ns)
+    getSecretUsage: (cluster: string, ns: string): Promise<SecretUsage[]> => api.getSecretUsage(cluster, ns),
+    deletePod: (cluster: string, ns: string, name: string): Promise<void> => api.deletePod(cluster, ns, name),
+    scaleDeploy: (cluster: string, ns: string, name: string, replicas: number): Promise<void> => api.scaleDeploy(cluster, ns, name, replicas),
+    startPortForward: (cluster: string, ns: string, pod: string, localPort: number, remotePort: number): Promise<string> => api.startPortForward(cluster, ns, pod, localPort, remotePort),
+    stopPortForward: (id: string): Promise<void> => api.stopPortForward(id),
+    getGlobalEvents: (cluster: string, query: string): Promise<K8sEvent[]> => api.getGlobalEvents(cluster, query)
   }
 }

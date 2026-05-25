@@ -36,6 +36,11 @@ const api: HorusAPI = {
   getNetworkPolicies: (cluster, namespace) => ipcRenderer.invoke('k8s:get-network-policies', cluster, namespace),
   getSecurityScan: (cluster, namespace) => ipcRenderer.invoke('k8s:get-security-scan', cluster, namespace),
   getSecretUsage: (cluster, namespace) => ipcRenderer.invoke('k8s:get-secret-usage', cluster, namespace),
+  deletePod: (cluster, namespace, name) => ipcRenderer.invoke('k8s:delete-pod', cluster, namespace, name),
+  scaleDeploy: (cluster, namespace, name, replicas) => ipcRenderer.invoke('k8s:scale-deploy', cluster, namespace, name, replicas),
+  startPortForward: (cluster, namespace, pod, localPort, remotePort) => ipcRenderer.invoke('k8s:start-port-forward', cluster, namespace, pod, localPort, remotePort),
+  stopPortForward: (id) => ipcRenderer.invoke('k8s:stop-port-forward', id),
+  getGlobalEvents: (cluster, query) => ipcRenderer.invoke('k8s:get-global-events', cluster, query),
   onLogChunk: (callback) => {
     const handler = (_event: any, chunk: any) => callback(chunk)
     ipcRenderer.on('k8s:log-chunk', handler)

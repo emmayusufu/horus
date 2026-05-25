@@ -223,6 +223,15 @@ export interface SecretUsage {
   referencedBy: string[]
 }
 
+export interface PortForward {
+  id: string
+  cluster: string
+  namespace: string
+  pod: string
+  localPort: number
+  remotePort: number
+}
+
 export interface LogChunk {
   streamId: string
   data: string
@@ -263,6 +272,11 @@ export interface HorusAPI {
   getNetworkPolicies: (cluster: string, namespace: string) => Promise<NetworkPolicySummary[]>
   getSecurityScan: (cluster: string, namespace: string) => Promise<SecurityIssue[]>
   getSecretUsage: (cluster: string, namespace: string) => Promise<SecretUsage[]>
+  deletePod: (cluster: string, namespace: string, name: string) => Promise<void>
+  scaleDeploy: (cluster: string, namespace: string, name: string, replicas: number) => Promise<void>
+  startPortForward: (cluster: string, namespace: string, pod: string, localPort: number, remotePort: number) => Promise<string>
+  stopPortForward: (id: string) => Promise<void>
+  getGlobalEvents: (cluster: string, query: string) => Promise<K8sEvent[]>
 }
 
 declare global {

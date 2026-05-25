@@ -16,21 +16,32 @@ export function PortForwardPanel({ cluster, namespace, podName }: PortForwardPan
   const [remotePort, setRemotePort] = useState('80')
   const [forwards, setForwards] = useState<ActiveForward[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleStart = async () => {
     const lp = parseInt(localPort)
     const rp = parseInt(remotePort)
-    if (isNaN(lp) || isNaN(rp)) return
+    if (isNaN(lp) || isNaN(rp) || lp < 1 || lp > 65535 || rp < 1 || rp > 65535) {
+      setError('Invalid port (1-65535)')
+      return
+    }
+    if (forwards.some((f) => f.localPort === lp)) {
+      setError(`Port ${lp} already forwarded`)
+      return
+    }
+    setError(null)
     setLoading(true)
     try {
       const id = await k8s.startPortForward(cluster, namespace, podName, lp, rp)
       setForwards([...forwards, { id, localPort: lp, remotePort: rp }])
-    } catch {}
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to start port forward')
+    }
     setLoading(false)
   }
 
   const handleStop = async (id: string) => {
-    await k8s.stopPortForward(id)
+    try { await k8s.stopPortForward(id) } catch {}
     setForwards(forwards.filter((f) => f.id !== id))
   }
 
@@ -43,10 +54,11 @@ export function PortForwardPanel({ cluster, namespace, podName }: PortForwardPan
         <InputGroup small placeholder="Remote" value={remotePort} onChange={(e) => setRemotePort(e.target.value)} style={{ width: 70 }} className="monospace" />
         <Button small intent={Intent.SUCCESS} onClick={handleStart} loading={loading}>Forward</Button>
       </div>
+      {error && <div style={{ fontSize: 12, color: '#e5564f', marginBottom: 6 }}>{error}</div>}
       {forwards.map((f) => (
         <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 12 }}>
           <Tag intent={Intent.SUCCESS} minimal round>active</Tag>
-          <span className="monospace">localhost:{f.localPort} -> {f.remotePort}</span>
+          <span className="monospace">localhost:{f.localPort} {'->'} {f.remotePort}</span>
           <Button small minimal icon="cross" intent={Intent.DANGER} onClick={() => handleStop(f.id)} style={{ marginLeft: 'auto' }} />
         </div>
       ))}

@@ -1,5 +1,7 @@
 import { ipcMain, dialog, BrowserWindow, Notification } from 'electron'
-import { loadContexts, connectCluster, disconnectCluster, getClient } from './k8s/client'
+import * as k8s from '@kubernetes/client-node'
+import * as net from 'net'
+import { loadContexts, connectCluster, disconnectCluster, getClient, getKubeConfig } from './k8s/client'
 import { startWatching, stopWatching } from './k8s/watcher'
 import { ResourceCache } from './k8s/cache'
 import { fetchLogs, startLogStream, stopLogStream, stopAllLogStreams } from './k8s/logs'
@@ -595,5 +597,65 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
         referencedBy: referencedBy.slice(0, 10)
       }
     })
+  })
+
+  ipcMain.handle('k8s:delete-pod', async (_event, cluster: string, namespace: string, name: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+    await client.coreApi.deleteNamespacedPod({ name, namespace })
+  })
+
+  ipcMain.handle('k8s:scale-deploy', async (_event, cluster: string, namespace: string, name: string, replicas: number) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+    await client.appsApi.patchNamespacedDeploymentScale({
+      name,
+      namespace,
+      body: { spec: { replicas } }
+    })
+  })
+
+  const portForwards = new Map<string, net.Server>()
+  let pfCounter = 0
+
+  ipcMain.handle('k8s:start-port-forward', async (_event, cluster: string, namespace: string, pod: string, localPort: number, remotePort: number) => {
+    const kc = getKubeConfig(cluster)
+    const forward = new k8s.PortForward(kc)
+    const id = `pf-${++pfCounter}`
+
+    const server = net.createServer((socket) => {
+      forward.portForward(namespace, pod, [remotePort], socket, null, socket)
+    })
+
+    server.listen(localPort, '127.0.0.1')
+    portForwards.set(id, server)
+    return id
+  })
+
+  ipcMain.handle('k8s:stop-port-forward', (_event, id: string) => {
+    const server = portForwards.get(id)
+    if (server) {
+      server.close()
+      portForwards.delete(id)
+    }
+  })
+
+  ipcMain.handle('k8s:get-global-events', async (_event, cluster: string, query: string) => {
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    const events = await client.coreApi.listEventForAllNamespaces()
+    const lower = query.toLowerCase()
+    return events.items
+      .filter((e) => {
+        if (!query) return true
+        return (e.reason?.toLowerCase().includes(lower) ||
+          e.message?.toLowerCase().includes(lower) ||
+          e.involvedObject?.name?.toLowerCase().includes(lower) ||
+          e.involvedObject?.namespace?.toLowerCase().includes(lower))
+      })
+      .map(mapEvent)
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      .slice(0, 200)
   })
 }

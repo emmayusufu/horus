@@ -7,6 +7,7 @@ import { Debug } from './views/Debug'
 import { NodeView } from './views/NodeView'
 import { DiffView } from './views/DiffView'
 import { SecurityView } from './views/SecurityView'
+import { GlobalEvents } from './views/GlobalEvents'
 import { useResources } from './hooks/useResources'
 import { useK8s } from './hooks/useK8s'
 import type { K8sResource } from '../shared/types'
@@ -18,6 +19,7 @@ type View =
   | { type: 'nodes'; cluster: string }
   | { type: 'diff' }
   | { type: 'security'; cluster: string }
+  | { type: 'events' }
 
 export function App() {
   const [view, setView] = useState<View>({ type: 'overview' })
@@ -36,7 +38,7 @@ export function App() {
   useEffect(() => {
     k8s.listContexts().then((contexts) => {
       for (const ctx of contexts) {
-        k8s.connect(ctx)
+        k8s.connect(ctx).catch(() => {})
       }
     })
   }, [])
@@ -94,6 +96,9 @@ export function App() {
     breadcrumbs.push({ text: view.cluster, onClick: () => setView({ type: 'explore', cluster: view.cluster }) })
     breadcrumbs.push({ text: 'Security' })
   }
+  if (view.type === 'events') {
+    breadcrumbs.push({ text: 'Events' })
+  }
   if (view.type === 'diff') {
     breadcrumbs.push({ text: 'Compare' })
   }
@@ -107,6 +112,7 @@ export function App() {
         onToggleDarkMode={() => setDarkMode(!darkMode)}
         showCompare={clusters.length >= 2}
         onCompare={() => setView({ type: 'diff' })}
+        onEvents={() => setView({ type: 'events' })}
       />
       <CommandPalette
         isOpen={paletteOpen}
@@ -152,6 +158,12 @@ export function App() {
           cluster={view.cluster}
           namespaces={[...new Set((resourcesByCluster.get(view.cluster) ?? []).map((r) => r.namespace))].sort()}
           onBack={() => setView({ type: 'explore', cluster: view.cluster })}
+        />
+      )}
+      {view.type === 'events' && (
+        <GlobalEvents
+          clusters={clusters.map((c) => c.name)}
+          onBack={() => setView({ type: 'overview' })}
         />
       )}
       {view.type === 'diff' && (
