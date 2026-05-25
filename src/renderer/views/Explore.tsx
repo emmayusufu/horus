@@ -15,6 +15,7 @@ interface ExploreProps {
   resources: K8sResource[]
   onSelectResource: (resource: K8sResource) => void
   onShowNodes?: () => void
+  onShowSecurity?: () => void
 }
 
 const KINDS: ResourceKind[] = [
@@ -43,7 +44,7 @@ function formatAge(isoTimestamp: string): string {
   return `${days}d`
 }
 
-export function Explore({ cluster, resources, onSelectResource, onShowNodes }: ExploreProps) {
+export function Explore({ cluster, resources, onSelectResource, onShowNodes, onShowSecurity }: ExploreProps) {
   const [namespace, setNamespace] = useState<string>('all')
   const [kind, setKind] = useState<ResourceKind | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -116,6 +117,7 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes }: E
           />
         )}
         {onShowNodes && <Button small icon="cloud" text="Nodes" onClick={onShowNodes} />}
+        {onShowSecurity && <Button small icon="shield" text="Security" onClick={onShowSecurity} />}
       </div>
       {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
       {showInsights && namespace !== 'all' && (

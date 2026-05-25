@@ -6,6 +6,7 @@ import { Explore } from './views/Explore'
 import { Debug } from './views/Debug'
 import { NodeView } from './views/NodeView'
 import { DiffView } from './views/DiffView'
+import { SecurityView } from './views/SecurityView'
 import { useResources } from './hooks/useResources'
 import { useK8s } from './hooks/useK8s'
 import type { K8sResource } from '../shared/types'
@@ -16,6 +17,7 @@ type View =
   | { type: 'debug'; resource: K8sResource }
   | { type: 'nodes'; cluster: string }
   | { type: 'diff' }
+  | { type: 'security'; cluster: string }
 
 export function App() {
   const [view, setView] = useState<View>({ type: 'overview' })
@@ -48,6 +50,7 @@ export function App() {
       if (e.key === 'Escape' && view.type !== 'overview') {
         if (view.type === 'debug') setView({ type: 'explore', cluster: view.resource.cluster })
         else if (view.type === 'nodes') setView({ type: 'explore', cluster: view.cluster })
+        else if (view.type === 'security') setView({ type: 'explore', cluster: view.cluster })
         else setView({ type: 'overview' })
       }
     }
@@ -87,6 +90,10 @@ export function App() {
     })
     breadcrumbs.push({ text: view.resource.name })
   }
+  if (view.type === 'security') {
+    breadcrumbs.push({ text: view.cluster, onClick: () => setView({ type: 'explore', cluster: view.cluster }) })
+    breadcrumbs.push({ text: 'Security' })
+  }
   if (view.type === 'diff') {
     breadcrumbs.push({ text: 'Compare' })
   }
@@ -122,6 +129,7 @@ export function App() {
           resources={resourcesByCluster.get(view.cluster) ?? []}
           onSelectResource={handleSelectResource}
           onShowNodes={() => setView({ type: 'nodes', cluster: view.cluster })}
+          onShowSecurity={() => setView({ type: 'security', cluster: view.cluster })}
         />
       )}
       {view.type === 'debug' && (
@@ -137,6 +145,13 @@ export function App() {
           resources={resourcesByCluster.get(view.cluster) ?? []}
           onBack={() => setView({ type: 'explore', cluster: view.cluster })}
           onSelectResource={handleSelectResource}
+        />
+      )}
+      {view.type === 'security' && (
+        <SecurityView
+          cluster={view.cluster}
+          namespaces={[...new Set((resourcesByCluster.get(view.cluster) ?? []).map((r) => r.namespace))].sort()}
+          onBack={() => setView({ type: 'explore', cluster: view.cluster })}
         />
       )}
       {view.type === 'diff' && (

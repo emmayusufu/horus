@@ -194,6 +194,35 @@ export interface ConfigCheck {
   issues: string[]
 }
 
+export interface RBACBinding {
+  name: string
+  role: string
+  roleKind: string
+  subjects: { kind: string; name: string; namespace?: string }[]
+}
+
+export interface NetworkPolicySummary {
+  name: string
+  podSelector: Record<string, string>
+  matchingPods: number
+  ingressRules: number
+  egressRules: number
+}
+
+export interface SecurityIssue {
+  pod: string
+  namespace: string
+  issues: string[]
+}
+
+export interface SecretUsage {
+  name: string
+  namespace: string
+  type: string
+  age: string
+  referencedBy: string[]
+}
+
 export interface LogChunk {
   streamId: string
   data: string
@@ -230,6 +259,10 @@ export interface HorusAPI {
   getPVCs: (cluster: string, namespace: string) => Promise<PVCInfo[]>
   getResourceQuotas: (cluster: string, namespace: string) => Promise<ResourceQuota[]>
   getConfigChecks: (cluster: string, namespace: string) => Promise<ConfigCheck[]>
+  getRBAC: (cluster: string, namespace: string) => Promise<RBACBinding[]>
+  getNetworkPolicies: (cluster: string, namespace: string) => Promise<NetworkPolicySummary[]>
+  getSecurityScan: (cluster: string, namespace: string) => Promise<SecurityIssue[]>
+  getSecretUsage: (cluster: string, namespace: string) => Promise<SecretUsage[]>
 }
 
 declare global {

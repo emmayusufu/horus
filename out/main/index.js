@@ -57,6 +57,7 @@ function connectCluster(context) {
 		appsApi: kc.makeApiClient(_kubernetes_client_node.AppsV1Api),
 		batchApi: kc.makeApiClient(_kubernetes_client_node.BatchV1Api),
 		networkApi: kc.makeApiClient(_kubernetes_client_node.NetworkingV1Api),
+		autoscalingApi: kc.makeApiClient(_kubernetes_client_node.AutoscalingV2Api),
 		metricsAvailable: false
 	};
 	clients.set(context, client);
@@ -914,6 +915,135 @@ function registerIpcHandlers(mainWindow) {
 			default: throw new Error(`Unsupported kind: ${kind}`);
 		}
 		return JSON.stringify(resource, null, 2);
+	});
+	electron.ipcMain.handle("k8s:get-traffic-path", async (_event, cluster, namespace, serviceName) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const svc = await client.coreApi.readNamespacedService({
+			name: serviceName,
+			namespace
+		});
+		const ep = await client.coreApi.readNamespacedEndpoints({
+			name: serviceName,
+			namespace
+		}).catch(() => null);
+		const readyAddresses = ep?.subsets?.flatMap((s) => s.addresses?.map((a) => a.ip) ?? []) ?? [];
+		const notReadyAddresses = ep?.subsets?.flatMap((s) => s.notReadyAddresses?.map((a) => a.ip) ?? []) ?? [];
+		const pods = cache.getAll(cluster).filter((p) => p.kind === "Pod" && p.namespace === namespace);
+		const selector = svc.spec?.selector ?? {};
+		const matchingPods = pods.filter((p) => Object.entries(selector).every(([k, v]) => p.labels[k] === v));
+		let ingress = void 0;
+		try {
+			const ingresses = await client.networkApi.listNamespacedIngress({ namespace });
+			for (const ing of ingresses.items) {
+				for (const rule of ing.spec?.rules ?? []) {
+					for (const path of rule.http?.paths ?? []) if (path.backend?.service?.name === serviceName) {
+						ingress = {
+							name: ing.metadata?.name ?? "",
+							host: rule.host ?? "*",
+							path: path.path ?? "/",
+							serviceName
+						};
+						break;
+					}
+					if (ingress) break;
+				}
+				if (ingress) break;
+			}
+		} catch {}
+		return {
+			ingress,
+			service: {
+				name: serviceName,
+				type: svc.spec?.type ?? "ClusterIP",
+				clusterIP: svc.spec?.clusterIP ?? "",
+				externalIP: svc.status?.loadBalancer?.ingress?.[0]?.ip ?? svc.status?.loadBalancer?.ingress?.[0]?.hostname,
+				ports: (svc.spec?.ports ?? []).map((p) => `${p.port}/${p.protocol ?? "TCP"}`)
+			},
+			endpoints: {
+				ready: readyAddresses.length,
+				notReady: notReadyAddresses.length,
+				addresses: readyAddresses.slice(0, 10)
+			},
+			pods: matchingPods.map((p) => ({
+				name: p.name,
+				ready: p.health === "healthy",
+				status: p.status
+			}))
+		};
+	});
+	electron.ipcMain.handle("k8s:get-hpas", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		return (await client.autoscalingApi.listNamespacedHorizontalPodAutoscaler({ namespace })).items.map((h) => ({
+			name: h.metadata?.name ?? "",
+			targetKind: h.spec?.scaleTargetRef?.kind ?? "",
+			targetName: h.spec?.scaleTargetRef?.name ?? "",
+			minReplicas: h.spec?.minReplicas ?? 1,
+			maxReplicas: h.spec?.maxReplicas ?? 1,
+			currentReplicas: h.status?.currentReplicas ?? 0,
+			desiredReplicas: h.status?.desiredReplicas ?? 0,
+			metrics: (h.status?.currentMetrics ?? []).map((m) => ({
+				name: m.resource?.name ?? m.type ?? "",
+				current: m.resource?.current?.averageUtilization?.toString() ?? "?",
+				target: h.spec?.metrics?.find((sm) => sm.resource?.name === m.resource?.name)?.resource?.target?.averageUtilization?.toString() ?? "?"
+			}))
+		}));
+	});
+	electron.ipcMain.handle("k8s:get-pvcs", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const pvcs = await client.coreApi.listNamespacedPersistentVolumeClaim({ namespace });
+		const pods = cache.getAll(cluster).filter((p) => p.kind === "Pod" && p.namespace === namespace);
+		return pvcs.items.map((pvc) => {
+			const pvcName = pvc.metadata?.name ?? "";
+			const mountedBy = pods.filter((p) => {
+				return cache.getAll(cluster).some((r) => r.kind === "Pod" && r.name === p.name);
+			}).map((p) => p.name).slice(0, 5);
+			return {
+				name: pvcName,
+				namespace: pvc.metadata?.namespace ?? "",
+				status: pvc.status?.phase ?? "Unknown",
+				capacity: pvc.status?.capacity?.storage ?? pvc.spec?.resources?.requests?.storage ?? "?",
+				storageClass: pvc.spec?.storageClassName ?? "",
+				accessModes: pvc.spec?.accessModes ?? [],
+				volumeName: pvc.spec?.volumeName ?? "",
+				pods: mountedBy
+			};
+		});
+	});
+	electron.ipcMain.handle("k8s:get-resource-quotas", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		return (await client.coreApi.listNamespacedResourceQuota({ namespace })).items.map((q) => ({
+			name: q.metadata?.name ?? "",
+			namespace: q.metadata?.namespace ?? "",
+			items: Object.keys(q.status?.hard ?? {}).map((resource) => ({
+				resource,
+				used: q.status?.used?.[resource] ?? "0",
+				hard: q.status?.hard?.[resource] ?? "0"
+			}))
+		}));
+	});
+	electron.ipcMain.handle("k8s:get-config-checks", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		return (await client.coreApi.listNamespacedPod({ namespace })).items.map((pod) => {
+			const issues = [];
+			for (const c of pod.spec?.containers ?? []) {
+				if (!c.resources?.requests && !c.resources?.limits) issues.push(`${c.name}: no resource limits`);
+				if (!c.livenessProbe) issues.push(`${c.name}: no liveness probe`);
+				if (!c.readinessProbe) issues.push(`${c.name}: no readiness probe`);
+			}
+			if (pod.spec?.securityContext?.runAsUser === 0) issues.push("running as root");
+			if (pod.spec?.containers?.some((c) => c.securityContext?.runAsUser === 0)) issues.push("container running as root");
+			return {
+				name: pod.metadata?.name ?? "",
+				namespace: pod.metadata?.namespace ?? "",
+				kind: "Pod",
+				issues
+			};
+		}).filter((c) => c.issues.length > 0);
 	});
 }
 //#endregion

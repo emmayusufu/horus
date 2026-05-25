@@ -32,6 +32,10 @@ const api: HorusAPI = {
   getPVCs: (cluster, namespace) => ipcRenderer.invoke('k8s:get-pvcs', cluster, namespace),
   getResourceQuotas: (cluster, namespace) => ipcRenderer.invoke('k8s:get-resource-quotas', cluster, namespace),
   getConfigChecks: (cluster, namespace) => ipcRenderer.invoke('k8s:get-config-checks', cluster, namespace),
+  getRBAC: (cluster, namespace) => ipcRenderer.invoke('k8s:get-rbac', cluster, namespace),
+  getNetworkPolicies: (cluster, namespace) => ipcRenderer.invoke('k8s:get-network-policies', cluster, namespace),
+  getSecurityScan: (cluster, namespace) => ipcRenderer.invoke('k8s:get-security-scan', cluster, namespace),
+  getSecretUsage: (cluster, namespace) => ipcRenderer.invoke('k8s:get-secret-usage', cluster, namespace),
   onLogChunk: (callback) => {
     const handler = (_event: any, chunk: any) => callback(chunk)
     ipcRenderer.on('k8s:log-chunk', handler)

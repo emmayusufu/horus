@@ -23,6 +23,11 @@ electron.contextBridge.exposeInMainWorld("horus", {
 	getNodes: (cluster) => electron.ipcRenderer.invoke("k8s:get-nodes", cluster),
 	getCronJobRuns: (cluster, namespace, name) => electron.ipcRenderer.invoke("k8s:get-cronjob-runs", cluster, namespace, name),
 	getResourceYaml: (cluster, namespace, name, kind) => electron.ipcRenderer.invoke("k8s:get-resource-yaml", cluster, namespace, name, kind),
+	getTrafficPath: (cluster, namespace, serviceName) => electron.ipcRenderer.invoke("k8s:get-traffic-path", cluster, namespace, serviceName),
+	getHPAs: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-hpas", cluster, namespace),
+	getPVCs: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-pvcs", cluster, namespace),
+	getResourceQuotas: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-resource-quotas", cluster, namespace),
+	getConfigChecks: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-config-checks", cluster, namespace),
 	onLogChunk: (callback) => {
 		const handler = (_event, chunk) => callback(chunk);
 		electron.ipcRenderer.on("k8s:log-chunk", handler);

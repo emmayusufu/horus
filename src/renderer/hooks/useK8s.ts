@@ -13,7 +13,11 @@ import type {
   HPAInfo,
   PVCInfo,
   ResourceQuota,
-  ConfigCheck
+  ConfigCheck,
+  RBACBinding,
+  NetworkPolicySummary,
+  SecurityIssue,
+  SecretUsage
 } from '../../shared/types'
 
 export function useK8s() {
@@ -51,6 +55,10 @@ export function useK8s() {
     getHPAs: (cluster: string, ns: string): Promise<HPAInfo[]> => api.getHPAs(cluster, ns),
     getPVCs: (cluster: string, ns: string): Promise<PVCInfo[]> => api.getPVCs(cluster, ns),
     getResourceQuotas: (cluster: string, ns: string): Promise<ResourceQuota[]> => api.getResourceQuotas(cluster, ns),
-    getConfigChecks: (cluster: string, ns: string): Promise<ConfigCheck[]> => api.getConfigChecks(cluster, ns)
+    getConfigChecks: (cluster: string, ns: string): Promise<ConfigCheck[]> => api.getConfigChecks(cluster, ns),
+    getRBAC: (cluster: string, ns: string): Promise<RBACBinding[]> => api.getRBAC(cluster, ns),
+    getNetworkPolicies: (cluster: string, ns: string): Promise<NetworkPolicySummary[]> => api.getNetworkPolicies(cluster, ns),
+    getSecurityScan: (cluster: string, ns: string): Promise<SecurityIssue[]> => api.getSecurityScan(cluster, ns),
+    getSecretUsage: (cluster: string, ns: string): Promise<SecretUsage[]> => api.getSecretUsage(cluster, ns)
   }
 }
