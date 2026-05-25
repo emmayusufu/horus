@@ -113,22 +113,63 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
           <Column
             name="Name"
             cellRenderer={(row) => (
-              <Cell interactive onClick={() => onSelectResource(filtered[row])}>
+              <Cell interactive onClick={() => onSelectResource(filtered[row])} className="explore-row-clickable">
                 <span className="monospace">{filtered[row]?.name}</span>
               </Cell>
             )}
           />
-          <Column name="Kind" cellRenderer={(row) => <Cell>{filtered[row]?.kind}</Cell>} />
-          <Column name="Status" cellRenderer={(row) => <Cell>{filtered[row]?.status}</Cell>} />
+          <Column
+            name="Kind"
+            cellRenderer={(row) => (
+              <Cell interactive onClick={() => onSelectResource(filtered[row])} className="explore-row-clickable">
+                {filtered[row]?.kind}
+              </Cell>
+            )}
+          />
+          <Column
+            name="Status"
+            cellRenderer={(row) => (
+              <Cell interactive onClick={() => onSelectResource(filtered[row])} className="explore-row-clickable">
+                {filtered[row]?.status}
+              </Cell>
+            )}
+          />
           <Column
             name="Restarts"
-            cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.restarts}</Cell>}
+            cellRenderer={(row) => (
+              <Cell
+                interactive
+                onClick={() => onSelectResource(filtered[row])}
+                className="monospace explore-row-clickable"
+              >
+                {filtered[row]?.restarts}
+              </Cell>
+            )}
           />
           <Column
             name="Namespace"
-            cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.namespace}</Cell>}
+            cellRenderer={(row) => (
+              <Cell
+                interactive
+                onClick={() => onSelectResource(filtered[row])}
+                className="monospace explore-row-clickable"
+              >
+                {filtered[row]?.namespace}
+              </Cell>
+            )}
           />
-          <Column name="Age" cellRenderer={(row) => <Cell className="monospace">{formatAge(filtered[row]?.age ?? '')}</Cell>} />
+          <Column
+            name="Age"
+            cellRenderer={(row) => (
+              <Cell
+                interactive
+                onClick={() => onSelectResource(filtered[row])}
+                className="monospace explore-row-clickable"
+              >
+                {formatAge(filtered[row]?.age ?? '')}
+              </Cell>
+            )}
+          />
         </Table2>
       </div>
     </div>

@@ -43,11 +43,16 @@ export function App() {
     setView({ type: 'debug', resource })
   }, [])
 
-  const handleNavigateOwner = useCallback((ownerKind: string, ownerName: string, namespace: string, cluster: string) => {
-    const resources = allResources()
-    const owner = resources.find(r => r.kind === ownerKind && r.name === ownerName && r.namespace === namespace && r.cluster === cluster)
-    if (owner) setView({ type: 'debug', resource: owner })
-  }, [allResources])
+  const handleNavigateOwner = useCallback(
+    (ownerKind: string, ownerName: string, namespace: string, cluster: string) => {
+      const resources = allResources()
+      const owner = resources.find(
+        (r) => r.kind === ownerKind && r.name === ownerName && r.namespace === namespace && r.cluster === cluster
+      )
+      if (owner) setView({ type: 'debug', resource: owner })
+    },
+    [allResources]
+  )
 
   const breadcrumbs: { text: string; onClick?: () => void }[] = [
     { text: 'Horus', onClick: () => setView({ type: 'overview' }) }
@@ -89,7 +94,11 @@ export function App() {
         />
       )}
       {view.type === 'debug' && (
-        <Debug resource={view.resource} onBack={() => setView({ type: 'explore', cluster: view.resource.cluster })} onNavigate={handleNavigateOwner} />
+        <Debug
+          resource={view.resource}
+          onBack={() => setView({ type: 'explore', cluster: view.resource.cluster })}
+          onNavigate={handleNavigateOwner}
+        />
       )}
     </div>
   )

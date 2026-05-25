@@ -63,43 +63,78 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
     resource.health === 'critical' ? Intent.DANGER : resource.health === 'warning' ? Intent.WARNING : Intent.SUCCESS
 
   return (
-    <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Button minimal icon="arrow-left" onClick={onBack} />
-        <span className="monospace" style={{ fontSize: 16 }}>
-          {resource.name}
-        </span>
-        <Button minimal small icon="clipboard" onClick={() => navigator.clipboard.writeText(`${resource.namespace}/${resource.name}`)} />
-        <div style={{ marginLeft: 'auto' }}>
-          <Button icon="export" text="Export snapshot" onClick={handleExport} />
+    <div className="debug-page">
+      <div className="debug-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Button minimal icon="arrow-left" onClick={onBack} />
+          <Tag large intent={healthIntent}>
+            {resource.status}
+          </Tag>
+          <span className="debug-resource-name">{resource.name}</span>
+          <Button
+            minimal
+            small
+            icon="clipboard"
+            onClick={() => navigator.clipboard.writeText(`${resource.namespace}/${resource.name}`)}
+          />
+        </div>
+        <Button icon="export" text="Export" small onClick={handleExport} />
+      </div>
+
+      <div className="debug-meta">
+        <div className="debug-meta-item">
+          <span className="debug-meta-label">namespace</span>
+          <span className="monospace">{resource.namespace}</span>
+        </div>
+        <div className="debug-meta-item">
+          <span className="debug-meta-label">restarts</span>
+          <span className="monospace">{resource.restarts}</span>
+        </div>
+        {resource.node && resource.node !== '-' && (
+          <div className="debug-meta-item">
+            <span className="debug-meta-label">node</span>
+            <span className="monospace">{resource.node}</span>
+          </div>
+        )}
+        {resource.ownerKind && (
+          <div className="debug-meta-item">
+            <span className="debug-meta-label">owner</span>
+            <span
+              className="monospace debug-owner-link"
+              onClick={() => onNavigate(resource.ownerKind!, resource.ownerName!, resource.namespace, resource.cluster)}
+            >
+              {resource.ownerKind}/{resource.ownerName}
+            </span>
+          </div>
+        )}
+        <div className="debug-meta-item">
+          <span className="debug-meta-label">cluster</span>
+          <span className="monospace">{resource.cluster}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
-        <Tag large intent={healthIntent}>
-          {resource.status}
-        </Tag>
-        <span className="monospace">Restarts: {resource.restarts}</span>
-        {resource.node && <span className="monospace">Node: {resource.node}</span>}
-        {resource.ownerKind && (
-          <span
-            className="monospace"
-            style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
-            onClick={() => onNavigate(resource.ownerKind!, resource.ownerName!, resource.namespace, resource.cluster)}
-          >
-            Owner: {resource.ownerKind}/{resource.ownerName}
-          </span>
-        )}
+
+      <div className="debug-columns">
+        <div className="debug-sidebar">
+          {detail.conditions && detail.conditions.length > 0 && <PodConditions conditions={detail.conditions} />}
+          {detail.containers && detail.containers.length > 0 && <ContainerStates containers={detail.containers} />}
+          <ResourceUsage {...detail.resources} />
+          <RelatedList related={detail.related} />
+          {detail.helm && <HelmBanner helm={detail.helm} />}
+        </div>
+
+        <div className="debug-main">
+          <Timeline events={detail.events} />
+          <LogViewer
+            logs={detail.logs}
+            cluster={resource.cluster}
+            namespace={resource.namespace}
+            podName={resource.name}
+          />
+          {resource.kind === 'Pod' && (
+            <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
+          )}
+        </div>
       </div>
-      {detail.conditions && detail.conditions.length > 0 && <PodConditions conditions={detail.conditions} />}
-      {detail.containers && detail.containers.length > 0 && <ContainerStates containers={detail.containers} />}
-      {detail.helm && <HelmBanner helm={detail.helm} />}
-      <Timeline events={detail.events} />
-      <LogViewer logs={detail.logs} cluster={resource.cluster} namespace={resource.namespace} podName={resource.name} />
-      <ResourceUsage {...detail.resources} />
-      <RelatedList related={detail.related} />
-      {resource.kind === 'Pod' && (
-        <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
-      )}
     </div>
   )
 }

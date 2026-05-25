@@ -201,18 +201,27 @@ async function startWatching(context, onUpdate) {
 	const watchPath = async (path, toResource) => {
 		const abort = new AbortController();
 		watches.push({ abort });
-		try {
-			await watch.watch(path, {}, (type, obj) => {
-				const r = toResource(obj);
-				if (type === "DELETED") resources.delete(r.uid);
-				else resources.set(r.uid, r);
-				emitUpdate();
-			}, (err) => {
-				if (err) console.error(`Watch error on ${path}:`, err);
-			});
-		} catch (err) {
-			console.error(`Failed to watch ${path}:`, err);
-		}
+		let retryDelay = 1e3;
+		const startWatch = async () => {
+			try {
+				await watch.watch(path, {}, (type, obj) => {
+					const r = toResource(obj);
+					if (type === "DELETED") resources.delete(r.uid);
+					else resources.set(r.uid, r);
+					emitUpdate();
+				}, () => {
+					if (abort.signal.aborted) return;
+					retryDelay = Math.min(retryDelay * 2, 3e4);
+					setTimeout(startWatch, retryDelay);
+				});
+				retryDelay = 1e3;
+			} catch {
+				if (abort.signal.aborted) return;
+				retryDelay = Math.min(retryDelay * 2, 3e4);
+				setTimeout(startWatch, retryDelay);
+			}
+		};
+		startWatch();
 	};
 	watchPath("/api/v1/pods", (obj) => podToResource(obj, context));
 	watchPath("/apis/apps/v1/deployments", (obj) => deploymentToResource(obj, context));
@@ -295,33 +304,20 @@ async function fetchLogs(context, namespace, podName, timestamps = false) {
 	return results;
 }
 async function fetchContainerLogs(client, namespace, podName, containerName, timestamps) {
-	let current = "";
-	let previous;
-	try {
-		current = await client.coreApi.readNamespacedPodLog({
-			name: podName,
-			namespace,
-			container: containerName,
-			tailLines: 200,
-			timestamps
-		});
-	} catch {
-		current = "(no logs available)";
-	}
-	try {
-		previous = await client.coreApi.readNamespacedPodLog({
-			name: podName,
-			namespace,
-			container: containerName,
-			previous: true,
-			tailLines: 200,
-			timestamps
-		});
-	} catch {}
+	const logOpts = {
+		name: podName,
+		namespace,
+		container: containerName,
+		tailLines: 200,
+		timestamps
+	};
 	return {
 		containerName,
-		current,
-		previous
+		current: await client.coreApi.readNamespacedPodLog(logOpts).catch(() => "(no logs available)"),
+		previous: await client.coreApi.readNamespacedPodLog({
+			...logOpts,
+			previous: true
+		}).catch(() => void 0)
 	};
 }
 var activeStreams = /* @__PURE__ */ new Map();
@@ -578,25 +574,37 @@ function generateSnapshot(detail) {
 }
 //#endregion
 //#region src/main/ipc.ts
+function mapEvent(e) {
+	return {
+		timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? "",
+		type: e.type ?? "Normal",
+		reason: e.reason ?? "",
+		message: e.message ?? "",
+		involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
+		count: e.count ?? 1,
+		source: e.source?.component ?? ""
+	};
+}
 function toContainerStateInfo(cs, isInit) {
-	let state = "waiting";
-	let reason;
-	let exitCode;
-	if (cs.state?.running) state = "running";
-	else if (cs.state?.terminated) {
-		state = "terminated";
-		reason = cs.state.terminated.reason;
-		exitCode = cs.state.terminated.exitCode;
-	} else if (cs.state?.waiting) {
-		state = "waiting";
-		reason = cs.state.waiting.reason;
-	}
+	if (cs.state?.running) return {
+		name: cs.name,
+		state: "running",
+		ready: cs.ready,
+		isInit
+	};
+	if (cs.state?.terminated) return {
+		name: cs.name,
+		state: "terminated",
+		ready: cs.ready,
+		reason: cs.state.terminated.reason,
+		exitCode: cs.state.terminated.exitCode,
+		isInit
+	};
 	return {
 		name: cs.name,
-		state,
+		state: "waiting",
 		ready: cs.ready,
-		reason,
-		exitCode,
+		reason: cs.state?.waiting?.reason,
 		isInit
 	};
 }
@@ -610,6 +618,14 @@ function registerIpcHandlers(mainWindow) {
 			connectCluster(context);
 			await checkMetricsAvailable(context);
 			await startWatching(context, (resources) => {
+				const previous = cache.getAll(context);
+				for (const r of resources) if (r.health === "critical") {
+					const prev = previous.find((p) => p.uid === r.uid);
+					if (prev && prev.health !== "critical") new electron.Notification({
+						title: `${r.kind} unhealthy`,
+						body: `${r.name} in ${r.namespace} — ${r.status}`
+					}).show();
+				}
 				cache.set(context, resources);
 				const update = {
 					cluster: context,
@@ -663,15 +679,7 @@ function registerIpcHandlers(mainWindow) {
 	electron.ipcMain.handle("k8s:get-events", async (_event, cluster, namespace, name) => {
 		const client = getClient(cluster);
 		if (!client) throw new Error(`Not connected to ${cluster}`);
-		return (await client.coreApi.listNamespacedEvent({ namespace })).items.filter((e) => e.involvedObject?.name === name).map((e) => ({
-			timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? "",
-			type: e.type ?? "Normal",
-			reason: e.reason ?? "",
-			message: e.message ?? "",
-			involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
-			count: e.count ?? 1,
-			source: e.source?.component ?? ""
-		})).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+		return (await client.coreApi.listNamespacedEvent({ namespace })).items.filter((e) => e.involvedObject?.name === name).map(mapEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 	});
 	electron.ipcMain.handle("k8s:get-related", async (_event, cluster, namespace, name, kind) => {
 		return fetchRelated(cluster, namespace, name, kind);
@@ -684,15 +692,7 @@ function registerIpcHandlers(mainWindow) {
 		if (!resource) throw new Error(`Resource not found: ${kind}/${name}`);
 		const client = getClient(cluster);
 		if (!client) throw new Error(`Not connected to ${cluster}`);
-		const filteredEvents = (await client.coreApi.listNamespacedEvent({ namespace })).items.filter((e) => e.involvedObject?.name === name).map((e) => ({
-			timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? "",
-			type: e.type ?? "Normal",
-			reason: e.reason ?? "",
-			message: e.message ?? "",
-			involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
-			count: e.count ?? 1,
-			source: e.source?.component ?? ""
-		})).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+		const filteredEvents = (await client.coreApi.listNamespacedEvent({ namespace })).items.filter((e) => e.involvedObject?.name === name).map(mapEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 		const [logs, related, metrics] = await Promise.all([
 			kind === "Pod" ? fetchLogs(cluster, namespace, name) : Promise.resolve([]),
 			fetchRelated(cluster, namespace, name, kind),
@@ -758,15 +758,7 @@ function registerIpcHandlers(mainWindow) {
 	electron.ipcMain.handle("k8s:get-namespace-events", async (_event, cluster, namespace) => {
 		const client = getClient(cluster);
 		if (!client) throw new Error(`Not connected to ${cluster}`);
-		return (await client.coreApi.listNamespacedEvent({ namespace })).items.map((e) => ({
-			timestamp: e.lastTimestamp?.toISOString() ?? e.eventTime?.toISOString() ?? "",
-			type: e.type ?? "Normal",
-			reason: e.reason ?? "",
-			message: e.message ?? "",
-			involvedObject: `${e.involvedObject?.kind?.toLowerCase()}/${e.involvedObject?.name}`,
-			count: e.count ?? 1,
-			source: e.source?.component ?? ""
-		})).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+		return (await client.coreApi.listNamespacedEvent({ namespace })).items.map(mapEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 	});
 	electron.ipcMain.handle("k8s:start-log-stream", (_event, cluster, namespace, pod, container, timestamps) => {
 		const streamId = startLogStream(cluster, namespace, pod, container, timestamps ?? false, (data) => {

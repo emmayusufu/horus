@@ -40,9 +40,7 @@ async function fetchContainerLogs(
   const logOpts = { name: podName, namespace, container: containerName, tailLines: 200, timestamps }
 
   const current = await client.coreApi.readNamespacedPodLog(logOpts).catch(() => '(no logs available)')
-  const previous = await client.coreApi
-    .readNamespacedPodLog({ ...logOpts, previous: true })
-    .catch(() => undefined)
+  const previous = await client.coreApi.readNamespacedPodLog({ ...logOpts, previous: true }).catch(() => undefined)
 
   return { containerName, current, previous }
 }

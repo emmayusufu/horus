@@ -56,3 +56,130 @@ body,
 .monospace * {
   font-family: 'Source Code Pro', 'SF Mono', 'Cascadia Code', monospace !important;
 }
+
+.debug-page {
+  padding: 16px;
+  overflow: auto;
+  flex: 1;
+}
+
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.debug-resource-name {
+  font-family: 'Source Code Pro', 'SF Mono', monospace !important;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+}
+
+.debug-meta {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.debug-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debug-meta-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+}
+
+.debug-owner-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.debug-columns {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .debug-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.debug-sidebar .bp5-card {
+  padding: 10px 12px;
+}
+
+.debug-sidebar .bp5-heading {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.log-viewer-output {
+  font-family: 'Source Code Pro', 'SF Mono', 'Cascadia Code', monospace !important;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.log-line {
+  display: flex;
+  padding: 0 8px;
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.log-line-number {
+  flex-shrink: 0;
+  width: 40px;
+  text-align: right;
+  padding-right: 12px;
+  color: rgba(255, 255, 255, 0.2);
+  user-select: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  margin-right: 12px;
+}
+
+.log-line-content {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-width: 0;
+}
+
+.log-highlight {
+  background-color: #fbd065;
+  color: #1c2127;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.log-json {
+  color: #8abbff;
+  white-space: pre;
+}
+
+.explore-row-clickable {
+  cursor: pointer;
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}

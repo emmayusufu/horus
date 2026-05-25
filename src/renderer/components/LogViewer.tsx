@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Card, H5, ButtonGroup, Button, InputGroup, Checkbox } from '@blueprintjs/core'
+import { Card, H5, ButtonGroup, Button, InputGroup, Checkbox, Tag } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { ContainerLogs } from '../../shared/types'
 
@@ -17,10 +17,11 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
   const [searchQuery, setSearchQuery] = useState('')
   const [following, setFollowing] = useState(false)
   const [timestamps, setTimestamps] = useState(false)
+  const [wordWrap, setWordWrap] = useState(true)
   const [currentLogs, setCurrentLogs] = useState<ContainerLogs[]>(logs)
   const [streamBuffer, setStreamBuffer] = useState('')
   const streamIdRef = useRef<string | null>(null)
-  const preRef = useRef<HTMLPreElement>(null)
+  const preRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -129,6 +130,8 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
   }, [rawText, searchQuery])
 
   const filteredLines = searchQuery ? displayLines.filter((l) => l.match) : displayLines
+  const matchCount = searchQuery ? displayLines.filter((l) => l.match).length : 0
+  const totalLines = displayLines.length
 
   if (!isPod) {
     return (
@@ -182,32 +185,73 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
           style={{ flex: 1 }}
           small
         />
+        {searchQuery && (
+          <Tag minimal round>
+            {matchCount}/{totalLines}
+          </Tag>
+        )}
         <Checkbox checked={timestamps} onChange={handleTimestampsToggle} label="Timestamps" style={{ margin: 0 }} />
+        <Button
+          small
+          minimal
+          icon={wordWrap ? 'align-justify' : 'arrow-right'}
+          title={wordWrap ? 'Wrap on' : 'Wrap off'}
+          onClick={() => setWordWrap(!wordWrap)}
+          active={wordWrap}
+        />
         <Button small minimal icon="clipboard" onClick={() => navigator.clipboard.writeText(rawText)} />
       </div>
-      <pre
+      <div
         ref={preRef}
-        className="monospace"
+        className="log-viewer-output"
         style={{
-          maxHeight: 300,
+          maxHeight: 400,
           overflow: 'auto',
           margin: 0,
-          padding: 8,
-          backgroundColor: 'rgba(0,0,0,0.2)',
-          borderRadius: 4,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all'
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          borderRadius: 4
         }}
       >
         {filteredLines.map((line, i) => (
-          <div key={i} style={getLogLevelStyle(line.text)}>
-            {highlightMatch(line.text, searchQuery)}
+          <div key={i} className="log-line" style={getLogLevelStyle(line.text)}>
+            <span className="log-line-number">{searchQuery ? displayLines.indexOf(line) + 1 : i + 1}</span>
+            <span
+              className="log-line-content"
+              style={wordWrap ? undefined : { whiteSpace: 'pre', overflow: 'visible' }}
+            >
+              {renderLogContent(line.text, searchQuery)}
+            </span>
           </div>
         ))}
-        {filteredLines.length === 0 && <span className="bp5-text-muted">(no matching lines)</span>}
-      </pre>
+        {filteredLines.length === 0 && (
+          <div className="log-line" style={{ padding: 8 }}>
+            <span className="bp5-text-muted">(no matching lines)</span>
+          </div>
+        )}
+      </div>
     </Card>
   )
+}
+
+function renderLogContent(text: string, query: string): React.ReactNode {
+  if (!text) return text
+
+  const jsonMatch = text.match(/^(.*?)(\{[\s\S]*\})\s*$/)
+  if (jsonMatch) {
+    const [, prefix, jsonStr] = jsonMatch
+    try {
+      const parsed = JSON.parse(jsonStr)
+      const formatted = JSON.stringify(parsed, null, 2)
+      return (
+        <>
+          {prefix && highlightMatch(prefix, query)}
+          <span className="log-json">{highlightMatch(formatted, query)}</span>
+        </>
+      )
+    } catch {}
+  }
+
+  return highlightMatch(text, query)
 }
 
 function highlightMatch(text: string, query: string): React.ReactNode {
@@ -219,9 +263,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   return (
     <>
       {text.slice(0, idx)}
-      <mark style={{ backgroundColor: '#FBD065', color: '#1C2127', borderRadius: 2, padding: '0 1px' }}>
-        {text.slice(idx, idx + query.length)}
-      </mark>
+      <mark className="log-highlight">{text.slice(idx, idx + query.length)}</mark>
       {text.slice(idx + query.length)}
     </>
   )
