@@ -825,3 +825,30 @@ body.horus-dark {
   color: #e5564f;
   background: rgba(229, 86, 79, 0.08);
 }
+
+.traffic-flow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.traffic-node {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.traffic-detail {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.traffic-arrow {
+  display: flex;
+  align-items: center;
+  padding-top: 4px;
+  opacity: 0.5;
+}
