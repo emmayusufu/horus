@@ -55,7 +55,7 @@ export function CommandPalette({ isOpen, onClose, resources, onSelect }: Command
       onClose={onClose}
       canOutsideClickClose
       canEscapeKeyClose
-      backdropClassName="horus-backdrop"
+      backdropProps={{ style: { backgroundColor: 'rgba(100,110,130,0.25)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } }}
       style={{ width: 560, paddingBottom: 0, borderRadius: 8 }}
     >
       <div style={{ padding: 0 }}>
