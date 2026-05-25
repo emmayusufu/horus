@@ -865,7 +865,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       namespace,
       cpuCores: Math.round(data.cpu * 100) / 100,
       memoryGB: Math.round(data.mem * 100) / 100,
-      monthlyCost: Math.round((data.cpu * 31.29 + data.mem * 4.38) * 100) / 100,
+      monthlyCost: Math.round((data.cpu * 12 + data.mem * 6) * 100) / 100,
       pods: data.pods
     })).sort((a, b) => b.monthlyCost - a.monthlyCost)
   })

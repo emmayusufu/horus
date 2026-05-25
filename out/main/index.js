@@ -636,6 +636,22 @@ function generateSnapshot(detail) {
 }
 //#endregion
 //#region src/main/ipc.ts
+function parseCpu(val) {
+	if (!val) return 0;
+	if (val.endsWith("m")) return parseInt(val) / 1e3;
+	if (val.endsWith("n")) return parseInt(val) / 1e9;
+	return parseFloat(val) || 0;
+}
+function parseMem(val) {
+	if (!val) return 0;
+	const num = parseFloat(val);
+	if (val.endsWith("Gi")) return num;
+	if (val.endsWith("Mi")) return num / 1024;
+	if (val.endsWith("Ki")) return num / (1024 * 1024);
+	if (val.endsWith("G")) return num;
+	if (val.endsWith("M")) return num / 1e3;
+	return num / (1024 * 1024 * 1024);
+}
 function toISO(val) {
 	if (!val) return "";
 	if (typeof val === "string") return val;
@@ -1372,26 +1388,31 @@ function registerIpcHandlers(mainWindow) {
 		};
 	});
 	electron.ipcMain.handle("k8s:get-cost-estimates", async (_event, cluster) => {
-		const resources = cache.getAll(cluster);
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const pods = await client.coreApi.listPodForAllNamespaces();
 		const byNs = /* @__PURE__ */ new Map();
-		for (const r of resources) {
-			if (r.kind !== "Pod") continue;
-			const ns = r.namespace;
+		for (const pod of pods.items) {
+			const ns = pod.metadata?.namespace ?? "";
 			const entry = byNs.get(ns) ?? {
 				cpu: 0,
 				mem: 0,
 				pods: 0
 			};
 			entry.pods++;
-			entry.cpu += .25;
-			entry.mem += .5;
+			for (const c of pod.spec?.containers ?? []) {
+				const cpuReq = c.resources?.requests?.cpu ?? c.resources?.limits?.cpu ?? "";
+				const memReq = c.resources?.requests?.memory ?? c.resources?.limits?.memory ?? "";
+				entry.cpu += parseCpu(cpuReq);
+				entry.mem += parseMem(memReq);
+			}
 			byNs.set(ns, entry);
 		}
 		return [...byNs.entries()].map(([namespace, data]) => ({
 			namespace,
-			cpuCores: data.cpu,
-			memoryGB: data.mem,
-			monthlyCost: Math.round((data.cpu * .048 + data.mem * .006) * 730 * 100) / 100,
+			cpuCores: Math.round(data.cpu * 100) / 100,
+			memoryGB: Math.round(data.mem * 100) / 100,
+			monthlyCost: Math.round((data.cpu * 31.29 + data.mem * 4.38) * 100) / 100,
 			pods: data.pods
 		})).sort((a, b) => b.monthlyCost - a.monthlyCost);
 	});
