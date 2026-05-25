@@ -24,6 +24,19 @@ const KINDS: ResourceKind[] = [
   'Secret'
 ]
 
+function formatAge(isoTimestamp: string): string {
+  const diff = Date.now() - new Date(isoTimestamp).getTime()
+  if (diff < 0) return '0s'
+  const seconds = Math.floor(diff / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  return `${days}d`
+}
+
 export function Explore({ cluster, resources, onSelectResource }: ExploreProps) {
   const [namespace, setNamespace] = useState<string>('all')
   const [kind, setKind] = useState<ResourceKind | 'all'>('all')
@@ -115,7 +128,7 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
             name="Namespace"
             cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.namespace}</Cell>}
           />
-          <Column name="Node" cellRenderer={(row) => <Cell className="monospace">{filtered[row]?.node}</Cell>} />
+          <Column name="Age" cellRenderer={(row) => <Cell className="monospace">{formatAge(filtered[row]?.age ?? '')}</Cell>} />
         </Table2>
       </div>
     </div>
