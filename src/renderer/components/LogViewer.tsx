@@ -272,13 +272,13 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 function getLogLevelStyle(text: string): React.CSSProperties | undefined {
   const upper = text.toUpperCase()
   if (upper.includes('ERROR') || upper.includes('FATAL') || upper.includes('PANIC')) {
-    return { color: '#F5498B' }
+    return { color: '#e5564f' }
   }
   if (upper.includes('WARN')) {
-    return { color: '#FBB360' }
+    return { color: '#cc8d35' }
   }
   if (upper.includes('DEBUG') || upper.includes('TRACE')) {
-    return { color: '#8ABBFF', opacity: 0.7 }
+    return { color: '#6e9fff', opacity: 0.7 }
   }
   return undefined
 }

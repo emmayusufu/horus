@@ -13,6 +13,13 @@ type View = { type: 'overview' } | { type: 'explore'; cluster: string } | { type
 export function App() {
   const [view, setView] = useState<View>({ type: 'overview' })
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [darkMode, setDarkMode] = useState(true)
+
+  useEffect(() => {
+    document.body.classList.toggle('bp5-dark', darkMode)
+    document.body.classList.toggle('horus-dark', darkMode)
+    document.body.classList.toggle('horus-light', !darkMode)
+  }, [darkMode])
   const { clusters, resourcesByCluster, allResources, unhealthy } = useResources()
   const k8s = useK8s()
 
@@ -70,7 +77,7 @@ export function App() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <TopBar breadcrumbs={breadcrumbs} onCommandPalette={() => setPaletteOpen(true)} />
+      <TopBar breadcrumbs={breadcrumbs} onCommandPalette={() => setPaletteOpen(true)} darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
       <CommandPalette
         isOpen={paletteOpen}
         onClose={() => setPaletteOpen(false)}

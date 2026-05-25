@@ -51,4 +51,8 @@ npm run format
 
 ## Stack
 
-Electron, React 18, Blueprint 6, @kubernetes/client-node, Vite, Vitest.
+Electron, React 18, Blueprint 6, @kubernetes/client-node, Recharts, Vite, Vitest.
+
+## License
+
+MIT
