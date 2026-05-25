@@ -171,10 +171,11 @@ body.horus-dark {
 
 }
 
-.horus-backdrop.bp6-overlay-backdrop {
-  background-color: rgba(100, 100, 120, 0.25) !important;
-  backdrop-filter: blur(6px) !important;
+// Global overlay backdrop — placed after Blueprint imports to override
+.bp6-overlay-backdrop {
+  background-color: rgba(100, 110, 130, 0.3) !important;
   -webkit-backdrop-filter: blur(6px) !important;
+  backdrop-filter: blur(6px) !important;
 }
 
 .horus-light {
