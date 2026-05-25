@@ -66,25 +66,24 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
           description={search ? 'No matching events' : 'No events in this namespace'}
         />
       ) : (
-        <div className="monospace" style={{ fontSize: 12, maxHeight: 400, overflow: 'auto' }}>
+        <div className="timeline-list" style={{ maxHeight: 400, overflow: 'auto' }}>
           {filtered.map((event, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', alignItems: 'center' }}>
-              <span className="bp5-text-muted" style={{ minWidth: 60 }}>
-                {formatTs(event.timestamp)}
-              </span>
-              {event.source && (
-                <span className="bp5-text-muted" style={{ minWidth: 70, fontSize: 11 }}>
-                  {event.source}
-                </span>
-              )}
-              <Tag minimal intent={event.type === 'Warning' ? Intent.WARNING : Intent.NONE} style={{ minWidth: 100 }}>
-                {event.reason}
-                {event.count > 1 ? ` x${event.count}` : ''}
-              </Tag>
-              <span className="bp5-text-muted" style={{ minWidth: 120 }}>
-                {event.involvedObject}
-              </span>
-              <span>{event.message}</span>
+            <div key={i} className={`timeline-event ${event.type === 'Warning' ? 'timeline-event-warning' : ''}`}>
+              <div className="timeline-dot-col">
+                <div className={`timeline-dot ${event.type === 'Warning' ? 'timeline-dot-warning' : 'timeline-dot-normal'}`} />
+                {i < filtered.length - 1 && <div className="timeline-connector" />}
+              </div>
+              <div className="timeline-content">
+                <div className="timeline-event-header">
+                  <Tag minimal intent={event.type === 'Warning' ? Intent.WARNING : Intent.NONE}>
+                    {event.reason}{event.count > 1 ? ` x${event.count}` : ''}
+                  </Tag>
+                  <span className="bp5-text-muted" style={{ fontSize: 11 }}>{event.involvedObject}</span>
+                  <span className="bp5-text-muted" style={{ fontSize: 11 }}>{formatTs(event.timestamp)}</span>
+                  {event.source && <span className="bp5-text-muted" style={{ fontSize: 11 }}>{event.source}</span>}
+                </div>
+                <div className="timeline-event-message">{event.message}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -95,7 +94,7 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
 
 function formatTs(ts: string): string {
   try {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   } catch {
     return ts
   }

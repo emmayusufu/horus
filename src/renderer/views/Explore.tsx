@@ -107,7 +107,8 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
         <Table2
           numRows={filtered.length}
           enableRowResizing={false}
-          columnWidths={[200, 100, 80, 60, 80, 100]}
+          enableColumnResizing
+          defaultColumnWidth={150}
           cellRendererDependencies={[filtered]}
         >
           <Column
