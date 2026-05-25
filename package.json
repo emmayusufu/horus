@@ -1,7 +1,7 @@
 {
   "name": "horus",
   "version": "1.0.0",
-  "description": "",
+  "description": "Kubernetes incident debugger for multi-cluster environments",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -17,8 +17,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,scss}\""
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["kubernetes", "k8s", "debugger", "electron"],
+  "author": "Emmanuel Kimaswa <kimaswaemma36@gmail.com>",
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {

@@ -4,20 +4,22 @@ Kubernetes incident debugger. When a pod crashes, instead of running kubectl log
 
 ## Features
 
-Three views: **Overview** (cluster health, what's broken), **Explore** (browse resources with filters), **Debug** (full context for one resource).
+Five views: **Overview** (dashboard with health ring and charts), **Explore** (resource browser with filters), **Debug** (full context for one resource), **Nodes** (node health and pod distribution), **Compare** (multi-cluster diff).
 
 The Debug view pulls together:
 - Streaming logs with search, level coloring, and timestamps
 - Init container logs
 - K8s events with source and repeat count
 - Pod conditions and container states
+- Deployment rollout progress with ReplicaSet breakdown
+- CronJob run history with pass/fail chart
 - CPU/memory usage (requires metrics-server)
 - Related services, ingress, configmaps, secrets
 - Helm release info
 - Raw pod spec (collapsible)
 - Exportable markdown snapshot
 
-Keyboard-driven: Cmd+K to search, Esc to go back.
+Dark and light mode. Keyboard-driven: Cmd+K to search, Esc to go back, `l` to follow logs, `/` to search logs, `t` for timestamps.
 
 ## Getting started
 
