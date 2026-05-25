@@ -5,3 +5,4 @@ dist/
 *.AppImage
 *.exe
 .DS_Store
+node_modules/
