@@ -14,6 +14,8 @@ import { TrafficPath } from '../components/TrafficPath'
 import { PodActions } from '../components/PodActions'
 import { PortForwardPanel } from '../components/PortForwardPanel'
 import { RootCausePanel } from '../components/RootCausePanel'
+import { SidecarInfo } from '../components/SidecarInfo'
+import { PodLifecycle } from '../components/PodLifecycle'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -128,7 +130,9 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
 
       <div className="debug-columns">
         <div className="debug-sidebar">
+          {detail.conditions && detail.conditions.length > 0 && <PodLifecycle conditions={detail.conditions} age={resource.age} />}
           {detail.conditions && detail.conditions.length > 0 && <PodConditions conditions={detail.conditions} />}
+          {detail.containers && detail.containers.length > 0 && <SidecarInfo containers={detail.containers} />}
           {detail.containers && detail.containers.length > 0 && <ContainerStates containers={detail.containers} />}
           <ResourceUsage {...detail.resources} />
           <RelatedList related={detail.related} />

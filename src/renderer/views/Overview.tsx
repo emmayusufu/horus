@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { NonIdealState, Button } from '@blueprintjs/core'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { ResourceHeatmap } from '../components/ResourceHeatmap'
+import { NamespaceComparison } from '../components/NamespaceComparison'
 import type { K8sResource, ClusterInfo } from '../../shared/types'
 
 interface OverviewProps {
@@ -123,6 +125,11 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      <div className="ov-grid ov-fade" style={{ animationDelay: '0.5s' }}>
+        <ResourceHeatmap resources={allResources} onSelect={onSelectResource} />
+        <NamespaceComparison resources={allResources} />
       </div>
 
       {unhealthy.length > 0 && (

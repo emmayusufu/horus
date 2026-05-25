@@ -1,5 +1,6 @@
+import { CardSkeleton } from './Skeleton'
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Card, H5, Spinner, InputGroup } from '@blueprintjs/core'
+import { Card, H5, InputGroup } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { TopologyNode, TopologyEdge } from '../../shared/types'
 
@@ -55,7 +56,7 @@ export function TopologyMap({ cluster, namespace }: TopologyMapProps) {
     return { nodes: vis, edges: edges.filter((e) => ids.has(e.from) && ids.has(e.to)) }
   }, [nodes, edges, filter])
 
-  if (loading) return <Card style={{ marginBottom: 12 }}><H5>Topology</H5><Spinner size={20} /></Card>
+  if (loading) return <CardSkeleton title chart lines={2} />
   if (nodes.length === 0) return null
 
   const columns = COLUMN_ORDER.map((kind) => filtered.nodes.filter((n) => n.kind === kind))

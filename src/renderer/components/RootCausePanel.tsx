@@ -1,5 +1,6 @@
+import { CardSkeleton } from './Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Tag, Intent, Spinner } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { RootCause } from '../../shared/types'
 
@@ -17,7 +18,7 @@ export function RootCausePanel({ cluster, namespace, name, kind }: RootCausePane
     k8s.analyzeRootCause(cluster, namespace, name, kind).then(setResult).catch(() => setResult(null)).finally(() => setLoading(false))
   }, [cluster, namespace, name, kind])
 
-  if (loading) return <Card style={{ marginBottom: 12 }}><H5>Root Cause Analysis</H5><Spinner size={20} /></Card>
+  if (loading) return <CardSkeleton title lines={3} />
   if (!result || result.confidence === 'low') return null
 
   return (

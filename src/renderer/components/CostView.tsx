@@ -1,5 +1,6 @@
+import { CardSkeleton } from './Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Spinner } from '@blueprintjs/core'
+import { Card, H5 } from '@blueprintjs/core'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useK8s } from '../hooks/useK8s'
 import type { CostEstimate } from '../../shared/types'
@@ -16,7 +17,7 @@ export function CostView({ cluster }: CostViewProps) {
     k8s.getCostEstimates(cluster).then(setCosts).catch(() => {}).finally(() => setLoading(false))
   }, [cluster])
 
-  if (loading) return <Card style={{ marginBottom: 12 }}><Spinner size={20} /></Card>
+  if (loading) return <CardSkeleton title chart lines={2} />
   if (costs.length === 0) return null
 
   const total = costs.reduce((sum, c) => sum + c.monthlyCost, 0)

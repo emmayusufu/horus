@@ -1,5 +1,6 @@
+import { CardSkeleton } from '../components/Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Tag, Intent, InputGroup, Button, Spinner } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent, InputGroup, Button } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sEvent } from '../../shared/types'
 
@@ -50,7 +51,7 @@ export function GlobalEvents({ clusters, onBack }: GlobalEventsProps) {
         <Button intent="primary" onClick={handleSearch} loading={loading}>Search</Button>
       </div>
 
-      {loading ? <Spinner style={{ margin: 40 }} /> : (
+      {loading ? (<CardSkeleton title lines={6} />) : (
         <Card style={{ padding: 0, borderRadius: 10, overflow: 'hidden' }}>
           {events.length === 0 ? (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>

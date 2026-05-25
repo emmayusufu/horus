@@ -1,5 +1,6 @@
+import { CardSkeleton } from './Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Tag, Intent, Spinner } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { HelmRelease } from '../../shared/types'
 
@@ -15,7 +16,7 @@ export function HelmReleases({ cluster }: HelmReleasesProps) {
     k8s.getHelmReleases(cluster).then(setReleases).catch(() => {}).finally(() => setLoading(false))
   }, [cluster])
 
-  if (loading) return <Card style={{ marginBottom: 12 }}><Spinner size={20} /></Card>
+  if (loading) return <CardSkeleton title lines={4} />
   if (releases.length === 0) return null
 
   return (

@@ -169,6 +169,43 @@ function jobToResource(job, cluster) {
 		ownerName: void 0
 	};
 }
+function serviceToResource(svc, cluster) {
+	const type = svc.spec?.type ?? "ClusterIP";
+	const ports = (svc.spec?.ports ?? []).map((p) => `${p.port}`).join(",");
+	return {
+		uid: svc.metadata?.uid ?? "",
+		name: svc.metadata?.name ?? "",
+		namespace: svc.metadata?.namespace ?? "",
+		kind: "Service",
+		cluster,
+		status: `${type} ${ports}`,
+		health: "healthy",
+		restarts: 0,
+		age: svc.metadata?.creationTimestamp?.toISOString() ?? "",
+		node: "-",
+		labels: svc.metadata?.labels ?? {},
+		ownerKind: void 0,
+		ownerName: void 0
+	};
+}
+function ingressToResource(ing, cluster) {
+	const hosts = (ing.spec?.rules ?? []).map((r) => r.host ?? "*").join(", ");
+	return {
+		uid: ing.metadata?.uid ?? "",
+		name: ing.metadata?.name ?? "",
+		namespace: ing.metadata?.namespace ?? "",
+		kind: "Ingress",
+		cluster,
+		status: hosts,
+		health: "healthy",
+		restarts: 0,
+		age: ing.metadata?.creationTimestamp?.toISOString() ?? "",
+		node: "-",
+		labels: ing.metadata?.labels ?? {},
+		ownerKind: void 0,
+		ownerName: void 0
+	};
+}
 function cronJobToResource(cj, cluster) {
 	const suspended = cj.spec?.suspend ?? false;
 	const lastSchedule = cj.status?.lastScheduleTime?.toISOString() ?? "";
@@ -194,33 +231,26 @@ async function startWatching(context, onUpdate) {
 	const coreApi = kc.makeApiClient(_kubernetes_client_node.CoreV1Api);
 	const appsApi = kc.makeApiClient(_kubernetes_client_node.AppsV1Api);
 	const batchApi = kc.makeApiClient(_kubernetes_client_node.BatchV1Api);
+	const networkApi = kc.makeApiClient(_kubernetes_client_node.NetworkingV1Api);
 	const resources = /* @__PURE__ */ new Map();
 	const emitUpdate = () => {
 		onUpdate([...resources.values()]);
 	};
 	try {
-		const [pods, deployments, jobs, cronJobs] = await Promise.all([
+		const [pods, deployments, jobs, cronJobs, services, ingresses] = await Promise.all([
 			coreApi.listPodForAllNamespaces(),
 			appsApi.listDeploymentForAllNamespaces(),
 			batchApi.listJobForAllNamespaces(),
-			batchApi.listCronJobForAllNamespaces()
+			batchApi.listCronJobForAllNamespaces(),
+			coreApi.listServiceForAllNamespaces(),
+			networkApi.listIngressForAllNamespaces().catch(() => ({ items: [] }))
 		]);
-		for (const pod of pods.items) {
-			const r = podToResource(pod, context);
-			resources.set(r.uid, r);
-		}
-		for (const dep of deployments.items) {
-			const r = deploymentToResource(dep, context);
-			resources.set(r.uid, r);
-		}
-		for (const job of jobs.items) {
-			const r = jobToResource(job, context);
-			resources.set(r.uid, r);
-		}
-		for (const cj of cronJobs.items) {
-			const r = cronJobToResource(cj, context);
-			resources.set(r.uid, r);
-		}
+		for (const pod of pods.items) resources.set(podToResource(pod, context).uid, podToResource(pod, context));
+		for (const dep of deployments.items) resources.set(deploymentToResource(dep, context).uid, deploymentToResource(dep, context));
+		for (const job of jobs.items) resources.set(jobToResource(job, context).uid, jobToResource(job, context));
+		for (const cj of cronJobs.items) resources.set(cronJobToResource(cj, context).uid, cronJobToResource(cj, context));
+		for (const svc of services.items) resources.set(serviceToResource(svc, context).uid, serviceToResource(svc, context));
+		for (const ing of ingresses.items) resources.set(ingressToResource(ing, context).uid, ingressToResource(ing, context));
 		emitUpdate();
 	} catch (err) {
 		console.error(`Failed initial list for ${context}:`, err);
@@ -256,6 +286,8 @@ async function startWatching(context, onUpdate) {
 	watchPath("/apis/apps/v1/deployments", (obj) => deploymentToResource(obj, context));
 	watchPath("/apis/batch/v1/jobs", (obj) => jobToResource(obj, context));
 	watchPath("/apis/batch/v1/cronjobs", (obj) => cronJobToResource(obj, context));
+	watchPath("/api/v1/services", (obj) => serviceToResource(obj, context));
+	watchPath("/apis/networking.k8s.io/v1/ingresses", (obj) => ingressToResource(obj, context));
 	activeWatches.set(context, watches);
 }
 function stopWatching(context) {

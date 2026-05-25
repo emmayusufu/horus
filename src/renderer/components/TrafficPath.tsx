@@ -1,5 +1,6 @@
+import { CardSkeleton } from './Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Tag, Intent, Spinner } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { TrafficPath as TrafficPathType } from '../../shared/types'
 
@@ -15,7 +16,7 @@ export function TrafficPath({ cluster, namespace, serviceName }: TrafficPathProp
     k8s.getTrafficPath(cluster, namespace, serviceName).then(setData).catch(() => {}).finally(() => setLoading(false))
   }, [cluster, namespace, serviceName])
 
-  if (loading) return <Card style={{ marginBottom: 12 }}><Spinner size={20} /></Card>
+  if (loading) return <CardSkeleton lines={3} />
   if (!data) return null
 
   return (

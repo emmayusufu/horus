@@ -1,5 +1,6 @@
+import { CardSkeleton } from '../components/Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Tag, Intent, Spinner, Button } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent, Button } from '@blueprintjs/core'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useK8s } from '../hooks/useK8s'
 import type { NodeInfo, K8sResource } from '../../shared/types'
@@ -22,7 +23,7 @@ export function NodeView({ cluster, resources, onBack, onSelectResource }: NodeV
     k8s.getNodes(cluster).then(setNodes).catch(() => {}).finally(() => setLoading(false))
   }, [cluster])
 
-  if (loading) return <Spinner style={{ margin: 40 }} />
+  if (loading) return <div style={{ padding: 16 }}><CardSkeleton title chart lines={3} /><CardSkeleton lines={4} /><CardSkeleton lines={4} /></div>
 
   const chartData = nodes.map((n) => ({
     name: n.name.length > 20 ? n.name.slice(0, 20) + '...' : n.name,

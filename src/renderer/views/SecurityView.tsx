@@ -1,5 +1,6 @@
+import { CardSkeleton } from '../components/Skeleton'
 import { useState, useEffect } from 'react'
-import { Card, H5, Tag, Intent, Spinner, Button, HTMLSelect } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent, Button, HTMLSelect } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { RBACBinding, NetworkPolicySummary, SecurityIssue, SecretUsage } from '../../shared/types'
 
@@ -47,7 +48,7 @@ export function SecurityView({ cluster, namespaces, onBack }: SecurityViewProps)
         </HTMLSelect>
       </div>
 
-      {loading ? <Spinner style={{ margin: 40 }} /> : (
+      {loading ? (<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><CardSkeleton title lines={4} /><CardSkeleton title lines={4} /><CardSkeleton title lines={3} /><CardSkeleton title lines={3} /></div>) : (
         <>
           <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
             <Card className="overview-stat-card">

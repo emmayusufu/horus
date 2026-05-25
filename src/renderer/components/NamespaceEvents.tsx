@@ -1,5 +1,6 @@
+import { CardSkeleton } from './Skeleton'
 import { useState, useEffect, useMemo } from 'react'
-import { Card, H5, Tag, Intent, InputGroup, HTMLSelect, Spinner, NonIdealState } from '@blueprintjs/core'
+import { Card, H5, Tag, Intent, InputGroup, HTMLSelect, NonIdealState } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sEvent } from '../../shared/types'
 
@@ -39,7 +40,7 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
     })
   }, [events, typeFilter, search])
 
-  if (loading) return <Spinner style={{ margin: 20 }} />
+  if (loading) return <CardSkeleton title lines={4} />
 
   return (
     <Card style={{ marginBottom: 12 }}>
