@@ -1176,6 +1176,230 @@ function registerIpcHandlers(mainWindow) {
 			return e.reason?.toLowerCase().includes(lower) || e.message?.toLowerCase().includes(lower) || e.involvedObject?.name?.toLowerCase().includes(lower) || e.involvedObject?.namespace?.toLowerCase().includes(lower);
 		}).map(mapEvent).sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 200);
 	});
+	electron.ipcMain.handle("k8s:analyze-root-cause", async (_event, cluster, namespace, name, kind) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const events = (await client.coreApi.listNamespacedEvent({ namespace })).items.filter((e) => e.involvedObject?.name === name);
+		const evidence = [];
+		let summary = "";
+		let suggestion = "";
+		let confidence = "low";
+		const reasons = events.map((e) => e.reason ?? "").filter(Boolean);
+		const messages = events.map((e) => e.message ?? "").filter(Boolean);
+		if (kind === "Pod") {
+			const pod = await client.coreApi.readNamespacedPod({
+				name,
+				namespace
+			});
+			const statuses = pod.status?.containerStatuses ?? [];
+			for (const cs of statuses) {
+				if (cs.state?.waiting?.reason === "CrashLoopBackOff") {
+					evidence.push(`Container ${cs.name} in CrashLoopBackOff`);
+					if (cs.lastState?.terminated?.reason === "OOMKilled") {
+						summary = "Pod is being OOM killed repeatedly";
+						suggestion = "Increase memory limits for this container or investigate memory leaks";
+						confidence = "high";
+						evidence.push(`Last termination: OOMKilled (exit code ${cs.lastState.terminated.exitCode})`);
+					} else if (cs.lastState?.terminated?.exitCode === 1) {
+						summary = "Application is crashing on startup";
+						suggestion = "Check the logs for stack traces or config errors. The container starts but exits immediately.";
+						confidence = "high";
+						evidence.push(`Last exit code: ${cs.lastState.terminated.exitCode}`);
+					} else {
+						summary = "Pod is in a crash loop";
+						suggestion = "Check container logs for the crash reason. Look for missing env vars, bad config, or dependency failures.";
+						confidence = "medium";
+					}
+					evidence.push(`Restart count: ${cs.restartCount}`);
+				}
+				if (cs.state?.waiting?.reason === "ImagePullBackOff" || cs.state?.waiting?.reason === "ErrImagePull") {
+					summary = "Container image cannot be pulled";
+					suggestion = "Check the image name and tag. If private registry, verify imagePullSecrets.";
+					confidence = "high";
+					evidence.push(`Image: ${cs.image}`);
+					evidence.push(`Reason: ${cs.state.waiting.reason}`);
+				}
+				if (cs.state?.waiting?.reason === "CreateContainerConfigError") {
+					summary = "Container config is invalid";
+					suggestion = "A referenced ConfigMap or Secret likely does not exist. Check env and volume references.";
+					confidence = "high";
+					evidence.push(`Reason: ${cs.state.waiting.message ?? cs.state.waiting.reason}`);
+				}
+			}
+			if (!summary && pod.status?.phase === "Pending") {
+				const scheduling = events.find((e) => e.reason === "FailedScheduling");
+				if (scheduling) {
+					summary = "Pod cannot be scheduled";
+					evidence.push(scheduling.message ?? "");
+					if (scheduling.message?.includes("Insufficient cpu") || scheduling.message?.includes("Insufficient memory")) {
+						suggestion = "Cluster does not have enough resources. Scale up nodes or reduce resource requests.";
+						confidence = "high";
+					} else if (scheduling.message?.includes("node(s) had taint")) {
+						suggestion = "No nodes match the pod tolerations. Add tolerations or remove taints.";
+						confidence = "high";
+					} else {
+						suggestion = "Check node affinity, tolerations, and available cluster resources.";
+						confidence = "medium";
+					}
+				}
+			}
+			if (!summary && reasons.includes("Unhealthy")) {
+				const unhealthyMsgs = messages.filter((m) => m.includes("probe failed"));
+				summary = "Health probes are failing";
+				suggestion = "The readiness or liveness probe is failing. Check the probe config and ensure the app is responding on the configured port/path.";
+				confidence = "medium";
+				for (const m of unhealthyMsgs.slice(0, 3)) evidence.push(m);
+			}
+			if (!summary && reasons.includes("Evicted")) {
+				summary = "Pod was evicted";
+				suggestion = "The node ran out of resources (disk, memory, or PIDs). Check node conditions.";
+				confidence = "high";
+				evidence.push(`Status: ${pod.status?.reason ?? "Evicted"}`);
+			}
+		}
+		if (!summary) {
+			summary = "No clear root cause identified";
+			suggestion = "Review the events and logs manually for clues.";
+			confidence = "low";
+			for (const m of messages.slice(0, 5)) evidence.push(m);
+		}
+		return {
+			summary,
+			confidence,
+			evidence,
+			suggestion
+		};
+	});
+	electron.ipcMain.handle("k8s:get-topology", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const [pods, services, deployments, ingresses] = await Promise.all([
+			client.coreApi.listNamespacedPod({ namespace }),
+			client.coreApi.listNamespacedService({ namespace }),
+			client.appsApi.listNamespacedDeployment({ namespace }),
+			client.networkApi.listNamespacedIngress({ namespace }).catch(() => ({ items: [] }))
+		]);
+		const nodes = [];
+		const edges = [];
+		for (const dep of deployments.items) {
+			const id = `dep-${dep.metadata?.name}`;
+			nodes.push({
+				id,
+				kind: "Deployment",
+				name: dep.metadata?.name ?? "",
+				health: "healthy"
+			});
+		}
+		for (const svc of services.items) {
+			const id = `svc-${svc.metadata?.name}`;
+			nodes.push({
+				id,
+				kind: "Service",
+				name: svc.metadata?.name ?? "",
+				health: "healthy"
+			});
+			const selector = svc.spec?.selector ?? {};
+			for (const pod of pods.items) {
+				const labels = pod.metadata?.labels ?? {};
+				if (Object.entries(selector).every(([k, v]) => labels[k] === v)) {
+					const owner = pod.metadata?.ownerReferences?.[0];
+					if (owner?.kind === "ReplicaSet") {
+						const depName = deployments.items.find((d) => d.metadata?.name && owner.name?.startsWith(d.metadata.name))?.metadata?.name;
+						if (depName) edges.push({
+							from: `svc-${svc.metadata?.name}`,
+							to: `dep-${depName}`,
+							label: ""
+						});
+					}
+				}
+			}
+		}
+		for (const ing of ingresses.items) {
+			const id = `ing-${ing.metadata?.name}`;
+			nodes.push({
+				id,
+				kind: "Ingress",
+				name: ing.metadata?.name ?? "",
+				health: "healthy"
+			});
+			for (const rule of ing.spec?.rules ?? []) for (const path of rule.http?.paths ?? []) if (path.backend?.service?.name) edges.push({
+				from: id,
+				to: `svc-${path.backend.service.name}`,
+				label: `${rule.host ?? "*"}${path.path ?? "/"}`
+			});
+		}
+		return {
+			nodes,
+			edges
+		};
+	});
+	electron.ipcMain.handle("k8s:get-cost-estimates", async (_event, cluster) => {
+		const resources = cache.getAll(cluster);
+		const byNs = /* @__PURE__ */ new Map();
+		for (const r of resources) {
+			if (r.kind !== "Pod") continue;
+			const ns = r.namespace;
+			const entry = byNs.get(ns) ?? {
+				cpu: 0,
+				mem: 0,
+				pods: 0
+			};
+			entry.pods++;
+			entry.cpu += .25;
+			entry.mem += .5;
+			byNs.set(ns, entry);
+		}
+		return [...byNs.entries()].map(([namespace, data]) => ({
+			namespace,
+			cpuCores: data.cpu,
+			memoryGB: data.mem,
+			monthlyCost: Math.round((data.cpu * .048 + data.mem * .006) * 730 * 100) / 100,
+			pods: data.pods
+		})).sort((a, b) => b.monthlyCost - a.monthlyCost);
+	});
+	electron.ipcMain.handle("k8s:get-helm-releases", async (_event, cluster) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const helmSecrets = (await client.coreApi.listSecretForAllNamespaces()).items.filter((s) => s.type === "helm.sh/release.v1");
+		const releases = /* @__PURE__ */ new Map();
+		for (const s of helmSecrets) {
+			const name = s.metadata?.labels?.name ?? "";
+			const revision = parseInt(s.metadata?.labels?.version ?? "0");
+			const existing = releases.get(name);
+			if (!existing || revision > existing.revision) releases.set(name, {
+				name,
+				namespace: s.metadata?.namespace ?? "",
+				chart: s.metadata?.labels?.name ?? "",
+				version: s.metadata?.labels?.version ?? "",
+				revision,
+				status: s.metadata?.labels?.status ?? "unknown",
+				updated: s.metadata?.creationTimestamp?.toISOString() ?? ""
+			});
+		}
+		return [...releases.values()].sort((a, b) => a.name.localeCompare(b.name));
+	});
+	electron.ipcMain.handle("k8s:get-sizing-recs", async (_event, cluster, namespace) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const pods = await client.coreApi.listNamespacedPod({ namespace });
+		const recs = [];
+		for (const pod of pods.items) for (const c of pod.spec?.containers ?? []) {
+			const cpuReq = c.resources?.requests?.cpu ?? "";
+			const memReq = c.resources?.requests?.memory ?? "";
+			if (cpuReq || memReq) recs.push({
+				pod: pod.metadata?.name ?? "",
+				namespace: pod.metadata?.namespace ?? "",
+				container: c.name,
+				cpuRequest: cpuReq || "none",
+				cpuActual: "n/a",
+				memRequest: memReq || "none",
+				memActual: "n/a",
+				cpuSaving: cpuReq ? "check metrics" : "",
+				memSaving: memReq ? "check metrics" : ""
+			});
+		}
+		return recs;
+	});
 }
 //#endregion
 //#region src/main/index.ts
