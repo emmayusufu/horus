@@ -1459,6 +1459,196 @@ function registerIpcHandlers(mainWindow) {
 		}
 		return recs;
 	});
+	electron.ipcMain.handle("k8s:trace-request", async (_event, cluster, host) => {
+		const client = getClient(cluster);
+		if (!client) throw new Error(`Not connected to ${cluster}`);
+		const hops = [];
+		let rootCause;
+		let suggestion;
+		const ingresses = await client.networkApi.listIngressForAllNamespaces().catch(() => ({ items: [] }));
+		let matchedIngress = null;
+		let matchedService = "";
+		let matchedNamespace = "";
+		for (const ing of ingresses.items) {
+			for (const rule of ing.spec?.rules ?? []) if (rule.host === host || host === "*") {
+				matchedIngress = ing;
+				matchedNamespace = ing.metadata?.namespace ?? "";
+				matchedService = (rule.http?.paths?.[0])?.backend?.service?.name ?? "";
+				const ingressClass = ing.spec?.ingressClassName ?? ing.metadata?.annotations?.["kubernetes.io/ingress.class"] ?? "unknown";
+				const tls = ing.spec?.tls?.some((t) => t.hosts?.includes(rule.host));
+				const paths = (rule.http?.paths ?? []).map((p) => `${p.path ?? "/"} -> ${p.backend?.service?.name}`).join(", ");
+				hops.push({
+					name: ing.metadata?.name,
+					kind: "Ingress",
+					status: "ok",
+					detail: `class: ${ingressClass}, tls: ${tls ? "yes" : "no"}, routes: ${paths}`,
+					issues: []
+				});
+				break;
+			}
+			if (matchedIngress) break;
+		}
+		if (!matchedIngress) {
+			hops.push({
+				name: host,
+				kind: "Ingress",
+				status: "error",
+				detail: "No ingress rule found for this host",
+				issues: ["No matching ingress"]
+			});
+			rootCause = `No ingress rule matches host "${host}"`;
+			suggestion = "Create an ingress resource with a rule for this hostname, or check for typos in the host.";
+			return {
+				url: host,
+				hops,
+				rootCause,
+				suggestion
+			};
+		}
+		const lbIp = matchedIngress.status?.loadBalancer?.ingress?.[0]?.ip ?? matchedIngress.status?.loadBalancer?.ingress?.[0]?.hostname ?? "";
+		if (lbIp) hops.push({
+			name: lbIp,
+			kind: "LoadBalancer",
+			status: "ok",
+			detail: `External: ${lbIp}`,
+			issues: []
+		});
+		if (!matchedService) {
+			hops.push({
+				name: "?",
+				kind: "Service",
+				status: "error",
+				detail: "No backend service in ingress rule",
+				issues: ["Missing backend"]
+			});
+			rootCause = "Ingress rule has no backend service configured";
+			suggestion = "Add a backend service to the ingress rule.";
+			return {
+				url: host,
+				hops,
+				rootCause,
+				suggestion
+			};
+		}
+		let svc;
+		try {
+			svc = await client.coreApi.readNamespacedService({
+				name: matchedService,
+				namespace: matchedNamespace
+			});
+			const svcType = svc.spec?.type ?? "ClusterIP";
+			const ports = (svc.spec?.ports ?? []).map((p) => `${p.port}/${p.protocol ?? "TCP"}`).join(", ");
+			hops.push({
+				name: matchedService,
+				kind: "Service",
+				status: "ok",
+				detail: `${svcType}, ports: ${ports}`,
+				issues: []
+			});
+		} catch {
+			hops.push({
+				name: matchedService,
+				kind: "Service",
+				status: "error",
+				detail: "Service not found",
+				issues: [`Service "${matchedService}" does not exist`]
+			});
+			rootCause = `Service "${matchedService}" referenced by ingress does not exist`;
+			suggestion = "Create the service or fix the ingress backend reference.";
+			return {
+				url: host,
+				hops,
+				rootCause,
+				suggestion
+			};
+		}
+		let ep;
+		try {
+			ep = await client.coreApi.readNamespacedEndpoints({
+				name: matchedService,
+				namespace: matchedNamespace
+			});
+		} catch {}
+		const readyAddresses = ep?.subsets?.flatMap((s) => s.addresses ?? []) ?? [];
+		const notReadyAddresses = ep?.subsets?.flatMap((s) => s.notReadyAddresses ?? []) ?? [];
+		const epIssues = [];
+		if (readyAddresses.length === 0 && notReadyAddresses.length === 0) epIssues.push("No endpoints at all — service selector matches zero pods");
+		else if (readyAddresses.length === 0) epIssues.push(`0 ready, ${notReadyAddresses.length} not ready — all backends are failing readiness`);
+		hops.push({
+			name: "Endpoints",
+			kind: "Endpoints",
+			status: readyAddresses.length > 0 ? "ok" : "error",
+			detail: `${readyAddresses.length} ready, ${notReadyAddresses.length} not ready`,
+			issues: epIssues
+		});
+		if (readyAddresses.length === 0 && notReadyAddresses.length === 0) {
+			const selector = svc.spec?.selector ?? {};
+			rootCause = `Service selector ${JSON.stringify(selector)} matches zero pods`;
+			suggestion = "Check that pods exist with labels matching the service selector. The deployment may have been scaled to 0 or deleted.";
+			return {
+				url: host,
+				hops,
+				rootCause,
+				suggestion
+			};
+		}
+		const selector = svc.spec?.selector ?? {};
+		const matchingPods = (await client.coreApi.listNamespacedPod({ namespace: matchedNamespace })).items.filter((p) => {
+			const labels = p.metadata?.labels ?? {};
+			return Object.entries(selector).every(([k, v]) => labels[k] === v);
+		});
+		const podIssues = [];
+		let crashingCount = 0;
+		let notReadyCount = 0;
+		for (const pod of matchingPods) {
+			if ((pod.status?.conditions?.find((c) => c.type === "Ready"))?.status !== "True") notReadyCount++;
+			for (const cs of pod.status?.containerStatuses ?? []) if (cs.state?.waiting?.reason === "CrashLoopBackOff") {
+				crashingCount++;
+				const lastReason = cs.lastState?.terminated?.reason ?? "";
+				podIssues.push(`${pod.metadata?.name}: CrashLoopBackOff${lastReason ? ` (${lastReason})` : ""}`);
+			} else if (cs.state?.waiting?.reason === "ImagePullBackOff") podIssues.push(`${pod.metadata?.name}: ImagePullBackOff — ${cs.image}`);
+			else if (cs.state?.terminated) podIssues.push(`${pod.metadata?.name}: terminated (exit ${cs.state.terminated.exitCode})`);
+		}
+		if (matchingPods.length === 0) podIssues.push("No pods match service selector");
+		hops.push({
+			name: `Pods (${matchingPods.length})`,
+			kind: "Pod",
+			status: podIssues.length > 0 ? "error" : notReadyCount > 0 ? "warning" : "ok",
+			detail: `${matchingPods.length} total, ${matchingPods.length - notReadyCount} ready, ${crashingCount} crashing`,
+			issues: podIssues.slice(0, 5)
+		});
+		if (readyAddresses.length === 0 && crashingCount > 0) {
+			const lastCrash = podIssues[0] ?? "";
+			if (lastCrash.includes("OOMKilled")) {
+				rootCause = "503: All pods are OOM killed. Zero ready endpoints.";
+				suggestion = "Increase memory limits for the containers in this deployment.";
+			} else if (lastCrash.includes("ImagePullBackOff")) {
+				rootCause = "503: Pods cannot pull their container image. Zero ready endpoints.";
+				suggestion = "Check the image name/tag and registry credentials.";
+			} else {
+				rootCause = "503: All pods are crash-looping. Zero ready endpoints.";
+				suggestion = "Check pod logs for the crash reason. Fix the application error, then the endpoints will recover.";
+			}
+		} else if (readyAddresses.length === 0 && notReadyCount > 0) {
+			rootCause = "503: All pods are failing readiness probes. Zero ready endpoints.";
+			suggestion = "Check the readiness probe configuration. The app may not be listening on the expected port/path.";
+		} else if (readyAddresses.length === 0) {
+			rootCause = "503: No pods match the service selector.";
+			suggestion = "Deploy pods with labels matching the service selector, or fix the selector.";
+		} else if (notReadyCount > 0) {
+			rootCause = `Degraded: ${notReadyCount}/${matchingPods.length} pods not ready. Service is partially available.`;
+			suggestion = "Some pods are unhealthy. Check their logs and events.";
+		} else {
+			rootCause = "All hops look healthy. If you are still seeing errors, check application-level issues (database connectivity, upstream dependencies).";
+			suggestion = "The infrastructure path is clean. The issue is likely inside the application.";
+		}
+		return {
+			url: host,
+			hops,
+			rootCause,
+			suggestion
+		};
+	});
 }
 //#endregion
 //#region src/main/index.ts

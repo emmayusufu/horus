@@ -37,6 +37,7 @@ electron.contextBridge.exposeInMainWorld("horus", {
 	startPortForward: (cluster, namespace, pod, localPort, remotePort) => electron.ipcRenderer.invoke("k8s:start-port-forward", cluster, namespace, pod, localPort, remotePort),
 	stopPortForward: (id) => electron.ipcRenderer.invoke("k8s:stop-port-forward", id),
 	getGlobalEvents: (cluster, query) => electron.ipcRenderer.invoke("k8s:get-global-events", cluster, query),
+	traceRequest: (cluster, host) => electron.ipcRenderer.invoke("k8s:trace-request", cluster, host),
 	analyzeRootCause: (cluster, namespace, name, kind) => electron.ipcRenderer.invoke("k8s:analyze-root-cause", cluster, namespace, name, kind),
 	getTopology: (cluster, namespace) => electron.ipcRenderer.invoke("k8s:get-topology", cluster, namespace),
 	getCostEstimates: (cluster) => electron.ipcRenderer.invoke("k8s:get-cost-estimates", cluster),

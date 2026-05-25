@@ -26,10 +26,11 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
     )
   }
 
-  const total = allResources.length
-  const healthy = allResources.filter((r) => r.health === 'healthy').length
-  const warning = allResources.filter((r) => r.health === 'warning').length
-  const critical = allResources.filter((r) => r.health === 'critical').length
+  const workloads = allResources.filter((r) => ['Pod', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob'].includes(r.kind))
+  const total = workloads.length
+  const healthy = workloads.filter((r) => r.health === 'healthy').length
+  const warning = workloads.filter((r) => r.health === 'warning').length
+  const critical = workloads.filter((r) => r.health === 'critical').length
   const healthPct = total > 0 ? Math.round((healthy / total) * 100) : 0
 
   const kindCounts = new Map<string, number>()
@@ -66,7 +67,7 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
         <div className="ov-metrics">
           <div className="ov-metric ov-fade" style={{ animationDelay: '0.1s' }}>
             <span className="ov-metric-val">{total}</span>
-            <span className="ov-metric-label">resources</span>
+            <span className="ov-metric-label">workloads</span>
           </div>
           <div className="ov-metric ov-fade" style={{ animationDelay: '0.2s' }}>
             <span className="ov-metric-val" style={{ color: '#3d9a5f' }}>{healthy}</span>
