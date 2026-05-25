@@ -9,6 +9,13 @@ interface CommandPaletteProps {
   onSelect: (resource: K8sResource) => void
 }
 
+const HEALTH_DOT: Record<string, string> = {
+  healthy: '#3d9a5f',
+  warning: '#cc8d35',
+  critical: '#e5564f',
+  unknown: '#5f6b7c'
+}
+
 export function CommandPalette({ isOpen, onClose, resources, onSelect }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -66,14 +73,20 @@ export function CommandPalette({ isOpen, onClose, resources, onSelect }: Command
             {filtered.map((resource, i) => (
               <MenuItem
                 key={resource.uid}
-                text={resource.name}
+                text={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                      background: HEALTH_DOT[resource.health] ?? HEALTH_DOT.unknown
+                    }} />
+                    <span>{resource.name}</span>
+                    <span style={{ fontSize: 11, opacity: 0.5, marginLeft: 'auto' }}>{resource.namespace}</span>
+                  </div>
+                }
                 label={resource.cluster}
                 icon={kindToIcon(resource.kind)}
                 active={i === activeIndex}
-                onClick={() => {
-                  onSelect(resource)
-                  onClose()
-                }}
+                onClick={() => { onSelect(resource); onClose() }}
                 roleStructure="listoption"
               />
             ))}
@@ -89,19 +102,12 @@ export function CommandPalette({ isOpen, onClose, resources, onSelect }: Command
 
 function kindToIcon(kind: string): string {
   switch (kind) {
-    case 'Pod':
-      return 'cube'
-    case 'Deployment':
-      return 'layers'
-    case 'Service':
-      return 'globe-network'
-    case 'Job':
-      return 'play'
-    case 'StatefulSet':
-      return 'database'
-    case 'DaemonSet':
-      return 'grid-view'
-    default:
-      return 'box'
+    case 'Pod': return 'cube'
+    case 'Deployment': return 'layers'
+    case 'Service': return 'globe-network'
+    case 'Job': return 'play'
+    case 'StatefulSet': return 'database'
+    case 'DaemonSet': return 'grid-view'
+    default: return 'box'
   }
 }

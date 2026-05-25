@@ -80,12 +80,11 @@ export function Explore({ cluster, resources, onSelectResource }: ExploreProps) 
           ))}
         </HTMLSelect>
         <HTMLSelect value={kind} onChange={(e) => setKind(e.target.value as any)}>
-          <option value="all">All types</option>
-          {KINDS.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
+          <option value="all">All types ({resources.length})</option>
+          {KINDS.map((k) => {
+            const ct = resources.filter((r) => r.kind === k && (namespace === 'all' || r.namespace === namespace)).length
+            return ct > 0 ? <option key={k} value={k}>{k} ({ct})</option> : null
+          })}
         </HTMLSelect>
         <HTMLSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">All status</option>
