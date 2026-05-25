@@ -63,4 +63,25 @@ describe('generateSnapshot', () => {
     const md = generateSnapshot(makeDetail({ helm: undefined }))
     expect(md).not.toContain('Helm Release')
   })
+
+  it('shows event count when greater than 1', () => {
+    const md = generateSnapshot(makeDetail({
+      events: [
+        { timestamp: '14:05', type: 'Warning', reason: 'BackOff', message: 'Back-off restarting', involvedObject: 'pod/test', count: 5, source: 'kubelet' }
+      ]
+    }))
+    expect(md).toContain('(x5)')
+    expect(md).toContain('[kubelet]')
+  })
+
+  it('marks init containers in logs', () => {
+    const md = generateSnapshot(makeDetail({
+      logs: [
+        { containerName: 'init-db', current: 'migrating...', isInit: true },
+        { containerName: 'main', current: 'running', isInit: false }
+      ]
+    }))
+    expect(md).toContain('init-db (init)')
+    expect(md).not.toContain('main (init)')
+  })
 })
