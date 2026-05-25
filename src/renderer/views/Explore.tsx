@@ -55,7 +55,7 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
   const [kind, setKind] = useState<ResourceKind | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showEvents, setShowEvents] = useState(false)
-  const [showInsights, setShowInsights] = useState(false)
+  const [showInsights, setShowInsights] = useState(true)
 
   const namespaces = useMemo(() => {
     const ns = new Set(resources.map((r) => r.namespace))
