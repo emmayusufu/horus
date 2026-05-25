@@ -28,8 +28,8 @@ export function App() {
       document.head.appendChild(styleEl)
     }
     styleEl.textContent = darkMode
-      ? `.bp6-overlay-backdrop { background-color: rgba(30,32,38,0.5) !important; }`
-      : `.bp6-overlay-backdrop { background-color: rgba(0,0,0,0.3) !important; }`
+      ? `.bp6-overlay-backdrop { background-color: rgba(200,200,220,0.08) !important; -webkit-backdrop-filter: blur(8px) !important; }`
+      : `.bp6-overlay-backdrop { background-color: rgba(0,0,0,0.25) !important; -webkit-backdrop-filter: blur(4px) !important; }`
   }, [darkMode])
   const { clusters, resourcesByCluster, allResources, unhealthy } = useResources()
   const k8s = useK8s()
