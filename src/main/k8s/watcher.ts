@@ -125,27 +125,37 @@ export async function startWatching(context: string, onUpdate: WatchCallback): P
   const watchPath = async (path: string, toResource: (obj: any) => K8sResource) => {
     const abort = new AbortController()
     watches.push({ abort })
+    let retryDelay = 1000
 
-    try {
-      await watch.watch(
-        path,
-        {},
-        (type: string, obj: any) => {
-          const r = toResource(obj)
-          if (type === 'DELETED') {
-            resources.delete(r.uid)
-          } else {
-            resources.set(r.uid, r)
+    const startWatch = async () => {
+      try {
+        await watch.watch(
+          path,
+          {},
+          (type: string, obj: any) => {
+            const r = toResource(obj)
+            if (type === 'DELETED') {
+              resources.delete(r.uid)
+            } else {
+              resources.set(r.uid, r)
+            }
+            emitUpdate()
+          },
+          (err: any) => {
+            if (abort.signal.aborted) return
+            retryDelay = Math.min(retryDelay * 2, 30_000)
+            setTimeout(startWatch, retryDelay)
           }
-          emitUpdate()
-        },
-        (err: any) => {
-          if (err) console.error(`Watch error on ${path}:`, err)
-        }
-      )
-    } catch (err) {
-      console.error(`Failed to watch ${path}:`, err)
+        )
+        retryDelay = 1000
+      } catch (err) {
+        if (abort.signal.aborted) return
+        retryDelay = Math.min(retryDelay * 2, 30_000)
+        setTimeout(startWatch, retryDelay)
+      }
     }
+
+    startWatch()
   }
 
   watchPath('/api/v1/pods', (obj) => podToResource(obj, context))
