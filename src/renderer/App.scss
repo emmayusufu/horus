@@ -171,14 +171,10 @@ body.horus-dark {
 
 }
 
-body.horus-dark .horus-backdrop {
-  background-color: rgba(0, 0, 0, 0.15) !important;
-  backdrop-filter: blur(8px) !important;
-}
-
-body.horus-light .horus-backdrop {
-  background-color: rgba(0, 0, 0, 0.3) !important;
-  backdrop-filter: blur(4px) !important;
+.horus-backdrop.bp6-overlay-backdrop {
+  background-color: rgba(100, 100, 120, 0.25) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
 }
 
 .horus-light {
