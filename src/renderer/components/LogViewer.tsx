@@ -21,6 +21,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
   const [streamBuffer, setStreamBuffer] = useState('')
   const streamIdRef = useRef<string | null>(null)
   const preRef = useRef<HTMLPreElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setCurrentLogs(logs)
@@ -71,6 +72,28 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
       preRef.current.scrollTop = preRef.current.scrollHeight
     }
   }, [streamBuffer, following])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      if (e.key === 'l') {
+        e.preventDefault()
+        handleFollowToggle()
+      }
+      if (e.key === '/' && isPod) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+      if (e.key === 't') {
+        e.preventDefault()
+        handleTimestampsToggle()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [following, timestamps, isPod])
 
   const handleTimestampsToggle = async () => {
     const next = !timestamps
@@ -151,6 +174,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
         <InputGroup
+          inputRef={searchRef}
           leftIcon="search"
           placeholder="Filter logs..."
           value={searchQuery}
