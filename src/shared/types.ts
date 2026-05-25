@@ -1,0 +1,117 @@
+export type HealthStatus = 'healthy' | 'warning' | 'critical' | 'unknown'
+
+export type ResourceKind =
+  | 'Pod'
+  | 'Deployment'
+  | 'StatefulSet'
+  | 'DaemonSet'
+  | 'Job'
+  | 'Service'
+  | 'Ingress'
+  | 'ConfigMap'
+  | 'Secret'
+
+export interface K8sResource {
+  uid: string
+  name: string
+  namespace: string
+  kind: ResourceKind
+  cluster: string
+  status: string
+  health: HealthStatus
+  restarts: number
+  age: string
+  node: string
+  labels: Record<string, string>
+  ownerKind?: string
+  ownerName?: string
+}
+
+export interface ClusterInfo {
+  name: string
+  connected: boolean
+  error?: string
+  resourceCounts: { total: number; healthy: number; warning: number; critical: number }
+  cpuPercent?: number
+  memPercent?: number
+}
+
+export interface K8sEvent {
+  timestamp: string
+  type: string
+  reason: string
+  message: string
+  involvedObject: string
+  count: number
+  source: string
+}
+
+export interface ContainerLogs {
+  containerName: string
+  current: string
+  previous?: string
+  isInit: boolean
+}
+
+export interface ResourceDetail {
+  resource: K8sResource
+  events: K8sEvent[]
+  logs: ContainerLogs[]
+  resources: {
+    cpuRequest?: string
+    cpuLimit?: string
+    cpuActual?: string
+    memRequest?: string
+    memLimit?: string
+    memActual?: string
+    metricsAvailable: boolean
+  }
+  related: RelatedResource[]
+  helm?: HelmInfo
+}
+
+export interface RelatedResource {
+  kind: string
+  name: string
+  detail: string
+}
+
+export interface HelmInfo {
+  chart: string
+  version: string
+  revision: number
+  managedBy: string
+}
+
+export interface ResourceUpdate {
+  cluster: string
+  resources: K8sResource[]
+  clusterInfo: ClusterInfo
+}
+
+export interface LogChunk {
+  streamId: string
+  data: string
+}
+
+export interface HorusAPI {
+  listContexts: () => Promise<string[]>
+  connect: (context: string) => Promise<ClusterInfo>
+  disconnect: (context: string) => Promise<void>
+  onResourceUpdate: (callback: (update: ResourceUpdate) => void) => () => void
+  getLogs: (cluster: string, namespace: string, pod: string, timestamps?: boolean) => Promise<ContainerLogs[]>
+  getEvents: (cluster: string, namespace: string, name: string) => Promise<K8sEvent[]>
+  getRelated: (cluster: string, namespace: string, name: string, kind: string) => Promise<RelatedResource[]>
+  getHelmInfo: (cluster: string, namespace: string, labels: Record<string, string>) => Promise<HelmInfo | null>
+  getResourceDetail: (cluster: string, namespace: string, name: string, kind: string) => Promise<ResourceDetail>
+  exportSnapshot: (detail: ResourceDetail) => Promise<string>
+  startLogStream: (cluster: string, namespace: string, pod: string, container: string, timestamps?: boolean) => Promise<string>
+  stopLogStream: (streamId: string) => Promise<void>
+  onLogChunk: (callback: (chunk: LogChunk) => void) => () => void
+}
+
+declare global {
+  interface Window {
+    horus: HorusAPI
+  }
+}
