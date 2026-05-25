@@ -273,6 +273,21 @@ export interface SizingRec {
   memSaving: string
 }
 
+export interface RequestTraceHop {
+  name: string
+  kind: string
+  status: 'ok' | 'warning' | 'error'
+  detail: string
+  issues: string[]
+}
+
+export interface RequestTrace {
+  url: string
+  hops: RequestTraceHop[]
+  rootCause: string
+  suggestion: string
+}
+
 export interface PortForward {
   id: string
   cluster: string
@@ -332,6 +347,7 @@ export interface HorusAPI {
   getCostEstimates: (cluster: string) => Promise<CostEstimate[]>
   getHelmReleases: (cluster: string) => Promise<HelmRelease[]>
   getSizingRecs: (cluster: string, namespace: string) => Promise<SizingRec[]>
+  traceRequest: (cluster: string, host: string) => Promise<RequestTrace>
 }
 
 declare global {

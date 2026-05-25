@@ -41,6 +41,7 @@ const api: HorusAPI = {
   startPortForward: (cluster, namespace, pod, localPort, remotePort) => ipcRenderer.invoke('k8s:start-port-forward', cluster, namespace, pod, localPort, remotePort),
   stopPortForward: (id) => ipcRenderer.invoke('k8s:stop-port-forward', id),
   getGlobalEvents: (cluster, query) => ipcRenderer.invoke('k8s:get-global-events', cluster, query),
+  traceRequest: (cluster, host) => ipcRenderer.invoke('k8s:trace-request', cluster, host),
   analyzeRootCause: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:analyze-root-cause', cluster, namespace, name, kind),
   getTopology: (cluster, namespace) => ipcRenderer.invoke('k8s:get-topology', cluster, namespace),
   getCostEstimates: (cluster) => ipcRenderer.invoke('k8s:get-cost-estimates', cluster),

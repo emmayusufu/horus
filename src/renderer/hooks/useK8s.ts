@@ -23,7 +23,8 @@ import type {
   TopologyEdge,
   CostEstimate,
   HelmRelease,
-  SizingRec
+  SizingRec,
+  RequestTrace
 } from '../../shared/types'
 
 export function useK8s() {
@@ -75,6 +76,7 @@ export function useK8s() {
     getTopology: (cluster: string, ns: string): Promise<{ nodes: TopologyNode[]; edges: TopologyEdge[] }> => api.getTopology(cluster, ns),
     getCostEstimates: (cluster: string): Promise<CostEstimate[]> => api.getCostEstimates(cluster),
     getHelmReleases: (cluster: string): Promise<HelmRelease[]> => api.getHelmReleases(cluster),
-    getSizingRecs: (cluster: string, ns: string): Promise<SizingRec[]> => api.getSizingRecs(cluster, ns)
+    getSizingRecs: (cluster: string, ns: string): Promise<SizingRec[]> => api.getSizingRecs(cluster, ns),
+    traceRequest: (cluster: string, host: string): Promise<RequestTrace> => api.traceRequest(cluster, host)
   }
 }
