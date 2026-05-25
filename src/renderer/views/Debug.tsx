@@ -146,7 +146,7 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
 }
 
 function DebugSkeleton() {
-  const bar = (w: string) => <div className="bp5-skeleton" style={{ height: 14, width: w, borderRadius: 4 }} />
+  const bar = (w: string) => <div className="bp6-skeleton" style={{ height: 14, width: w, borderRadius: 4 }} />
   return (
     <div className="debug-page">
       <div className="debug-header">

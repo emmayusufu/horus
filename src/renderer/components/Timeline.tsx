@@ -10,7 +10,7 @@ export function Timeline({ events }: TimelineProps) {
     <Card style={{ marginBottom: 12 }}>
       <H5>Events ({events.length})</H5>
       {events.length === 0 ? (
-        <span className="bp5-text-muted">No events</span>
+        <span className="bp6-text-muted">No events</span>
       ) : (
         <div className="timeline-list">
           {events.map((event, i) => (
@@ -25,8 +25,8 @@ export function Timeline({ events }: TimelineProps) {
                     {event.reason}
                     {event.count > 1 ? ` x${event.count}` : ''}
                   </Tag>
-                  <span className="bp5-text-muted" style={{ fontSize: 11 }}>{formatTimestamp(event.timestamp)}</span>
-                  {event.source && <span className="bp5-text-muted" style={{ fontSize: 11 }}>{event.source}</span>}
+                  <span className="bp6-text-muted" style={{ fontSize: 11 }}>{formatTimestamp(event.timestamp)}</span>
+                  {event.source && <span className="bp6-text-muted" style={{ fontSize: 11 }}>{event.source}</span>}
                 </div>
                 <div className="timeline-event-message">{event.message}</div>
               </div>

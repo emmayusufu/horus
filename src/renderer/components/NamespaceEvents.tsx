@@ -78,9 +78,9 @@ export function NamespaceEvents({ cluster, namespace }: NamespaceEventsProps) {
                   <Tag minimal intent={event.type === 'Warning' ? Intent.WARNING : Intent.NONE}>
                     {event.reason}{event.count > 1 ? ` x${event.count}` : ''}
                   </Tag>
-                  <span className="bp5-text-muted" style={{ fontSize: 11 }}>{event.involvedObject}</span>
-                  <span className="bp5-text-muted" style={{ fontSize: 11 }}>{formatTs(event.timestamp)}</span>
-                  {event.source && <span className="bp5-text-muted" style={{ fontSize: 11 }}>{event.source}</span>}
+                  <span className="bp6-text-muted" style={{ fontSize: 11 }}>{event.involvedObject}</span>
+                  <span className="bp6-text-muted" style={{ fontSize: 11 }}>{formatTs(event.timestamp)}</span>
+                  {event.source && <span className="bp6-text-muted" style={{ fontSize: 11 }}>{event.source}</span>}
                 </div>
                 <div className="timeline-event-message">{event.message}</div>
               </div>

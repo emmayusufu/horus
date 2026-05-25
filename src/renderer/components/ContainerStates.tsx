@@ -21,8 +21,8 @@ export function ContainerStates({ containers }: ContainerStatesProps) {
             <Tag minimal round intent={c.ready ? Intent.SUCCESS : Intent.NONE}>
               {c.ready ? 'ready' : 'not ready'}
             </Tag>
-            {c.reason && <span className="bp5-text-muted">{c.reason}</span>}
-            {c.exitCode !== undefined && <span className="bp5-text-muted">exit: {c.exitCode}</span>}
+            {c.reason && <span className="bp6-text-muted">{c.reason}</span>}
+            {c.exitCode !== undefined && <span className="bp6-text-muted">exit: {c.exitCode}</span>}
           </div>
         ))}
       </div>

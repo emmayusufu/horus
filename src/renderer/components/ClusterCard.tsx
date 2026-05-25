@@ -30,9 +30,9 @@ export function ClusterCard({ cluster, onClick }: ClusterCardProps) {
           <span className="monospace">{cluster.name}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span className="bp5-text-muted">{label}</span>
-          {cluster.cpuPercent != null && <span className="bp5-text-muted monospace">{cluster.cpuPercent}% cpu</span>}
-          {cluster.memPercent != null && <span className="bp5-text-muted monospace">{cluster.memPercent}% mem</span>}
+          <span className="bp6-text-muted">{label}</span>
+          {cluster.cpuPercent != null && <span className="bp6-text-muted monospace">{cluster.cpuPercent}% cpu</span>}
+          {cluster.memPercent != null && <span className="bp6-text-muted monospace">{cluster.memPercent}% mem</span>}
         </div>
       </div>
     </Card>

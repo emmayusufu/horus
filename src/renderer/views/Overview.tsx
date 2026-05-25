@@ -89,7 +89,7 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
             </ResponsiveContainer>
           ) : (
             <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="bp5-text-muted">No data</span>
+              <span className="bp6-text-muted">No data</span>
             </div>
           )}
         </Card>
@@ -118,7 +118,7 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
             </ResponsiveContainer>
           ) : (
             <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="bp5-text-muted">No data</span>
+              <span className="bp6-text-muted">No data</span>
             </div>
           )}
         </Card>
@@ -148,14 +148,14 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="bp5-text-muted" style={{ fontSize: 11 }}>
+                    <span className="bp6-text-muted" style={{ fontSize: 11 }}>
                       {!c.connected
                         ? 'unreachable'
                         : issues > 0
                           ? `${issues} issues`
                           : `${c.resourceCounts.total} resources`}
                     </span>
-                    <span className="bp5-icon bp5-icon-chevron-right bp5-text-muted" style={{ opacity: 0.4 }} />
+                    <span className="bp6-icon bp6-icon-chevron-right bp6-text-muted" style={{ opacity: 0.4 }} />
                   </div>
                 </div>
               )
@@ -209,7 +209,7 @@ export function Overview({ clusters, unhealthy, allResources, onSelectCluster, o
             {unhealthy.length > PAGE_SIZE && (
               <div className="overview-pagination">
                 <Button small minimal icon="chevron-left" disabled={page === 0} onClick={() => setPage(page - 1)} />
-                <span className="bp5-text-muted" style={{ fontSize: 12 }}>
+                <span className="bp6-text-muted" style={{ fontSize: 12 }}>
                   {page * PAGE_SIZE + 1}--{Math.min((page + 1) * PAGE_SIZE, unhealthy.length)} of {unhealthy.length}
                 </span>
                 <Button

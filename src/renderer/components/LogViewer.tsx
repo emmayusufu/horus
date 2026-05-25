@@ -137,7 +137,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
     return (
       <Card style={{ marginBottom: 12 }}>
         <H5>Logs</H5>
-        <span className="bp5-text-muted">No logs available (not a Pod)</span>
+        <span className="bp6-text-muted">No logs available (not a Pod)</span>
       </Card>
     )
   }
@@ -225,7 +225,7 @@ export function LogViewer({ logs, cluster, namespace, podName }: LogViewerProps)
         ))}
         {filteredLines.length === 0 && (
           <div className="log-line" style={{ padding: 8 }}>
-            <span className="bp5-text-muted">(no matching lines)</span>
+            <span className="bp6-text-muted">(no matching lines)</span>
           </div>
         )}
       </div>

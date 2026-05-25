@@ -16,9 +16,10 @@ export function App() {
   const [darkMode, setDarkMode] = useState(true)
 
   useEffect(() => {
-    document.body.classList.toggle('bp5-dark', darkMode)
+    document.body.classList.toggle('bp6-dark', darkMode)
     document.body.classList.toggle('horus-dark', darkMode)
     document.body.classList.toggle('horus-light', !darkMode)
+    document.body.style.background = darkMode ? '#1a1b1e' : '#f5f5f5'
   }, [darkMode])
   const { clusters, resourcesByCluster, allResources, unhealthy } = useResources()
   const k8s = useK8s()

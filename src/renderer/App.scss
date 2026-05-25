@@ -54,7 +54,7 @@ html, body, #root {
   flex-direction: column;
 }
 
-.bp5-heading, .bp5-text-large, .bp5-navbar {
+.bp6-heading, .bp6-text-large, .bp6-navbar {
   font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -63,8 +63,8 @@ html, body, #root {
   font-size: 12px;
 }
 
-.bp5-table-cell .monospace { font-size: 11px; }
-.bp5-dialog { margin-top: 80px; }
+.bp6-table-cell .monospace { font-size: 11px; }
+.bp6-dialog { margin-top: 80px; }
 
 * {
   font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -74,7 +74,7 @@ html, body, #root {
   font-family: 'Source Code Pro', 'SF Mono', 'Cascadia Code', monospace !important;
 }
 
-// Blueprint dark overrides — body.horus-dark for specificity over Blueprint's .bp5-dark
+// Blueprint dark overrides — body.horus-dark for specificity over Blueprint's .bp6-dark
 body.horus-dark {
   background: var(--bg-primary) !important;
   color: var(--text-primary) !important;
@@ -83,89 +83,89 @@ body.horus-dark {
     background: var(--bg-primary) !important;
   }
 
-  .bp5-card, .bp5-card.bp5-elevation-0, .bp5-card.bp5-elevation-1 {
+  .bp6-card, .bp6-card.bp6-elevation-0, .bp6-card.bp6-elevation-1 {
     background: var(--bg-card) !important;
     box-shadow: none !important;
     border: 1px solid var(--border);
     color: var(--text-primary);
   }
 
-  .bp5-navbar, .bp5-dark .bp5-navbar {
+  .bp6-navbar, .bp6-dark .bp6-navbar {
     background: var(--bg-secondary) !important;
     box-shadow: 0 1px 0 var(--border) !important;
     color: var(--text-primary) !important;
   }
 
-  .bp5-input,
-  .bp5-html-select select,
-  .bp5-tag.bp5-minimal {
+  .bp6-input,
+  .bp6-html-select select,
+  .bp6-tag.bp6-minimal {
     background: var(--bg-elevated) !important;
     color: var(--text-primary) !important;
   }
 
-  .bp5-html-table {
+  .bp6-html-table {
     color: var(--text-primary);
   }
 
-  .bp5-html-table th {
+  .bp6-html-table th {
     color: var(--text-muted);
   }
 
-  .bp5-breadcrumb,
-  .bp5-breadcrumbs-collapsed {
+  .bp6-breadcrumb,
+  .bp6-breadcrumbs-collapsed {
     color: var(--text-muted);
   }
 
-  .bp5-button.bp5-minimal {
+  .bp6-button.bp6-minimal {
     color: var(--text-primary) !important;
   }
 
-  .bp5-checkbox .bp5-control-indicator {
+  .bp6-checkbox .bp6-control-indicator {
     background: var(--bg-elevated) !important;
   }
 
-  .bp5-table-container,
-  .bp5-table-top-container,
-  .bp5-table-bottom-container,
-  .bp5-table-quadrant-main,
-  .bp5-table-quadrant-top,
-  .bp5-table-quadrant-left,
-  .bp5-table-cell,
-  .bp5-table-header {
+  .bp6-table-container,
+  .bp6-table-top-container,
+  .bp6-table-bottom-container,
+  .bp6-table-quadrant-main,
+  .bp6-table-quadrant-top,
+  .bp6-table-quadrant-left,
+  .bp6-table-cell,
+  .bp6-table-header {
     background: var(--bg-card) !important;
     color: var(--text-primary) !important;
   }
 
-  .bp5-table-header {
+  .bp6-table-header {
     color: var(--text-muted) !important;
   }
 
-  .bp5-dialog {
+  .bp6-dialog {
     background: var(--bg-card) !important;
   }
 
-  .bp5-dialog-header {
+  .bp6-dialog-header {
     background: var(--bg-elevated) !important;
   }
 
-  .bp5-non-ideal-state {
+  .bp6-non-ideal-state {
     color: var(--text-muted);
   }
 
-  .bp5-overlay-content,
-  .bp5-popover,
-  .bp5-menu {
+  .bp6-overlay-content,
+  .bp6-popover,
+  .bp6-menu {
     background: var(--bg-elevated) !important;
     color: var(--text-primary) !important;
   }
 
-  .bp5-callout {
+  .bp6-callout {
     background: var(--bg-elevated) !important;
   }
 }
 
 .horus-light {
-  .bp5-card {
+  .bp6-card {
     background: var(--bg-card);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
@@ -236,8 +236,8 @@ body.horus-dark {
   .debug-columns { grid-template-columns: 1fr; }
 }
 
-.debug-sidebar .bp5-card { padding: 10px 12px; }
-.debug-sidebar .bp5-heading { font-size: 13px; margin-bottom: 6px; }
+.debug-sidebar .bp6-card { padding: 10px 12px; }
+.debug-sidebar .bp6-heading { font-size: 13px; margin-bottom: 6px; }
 
 // --- Log viewer (Grafana-inspired) ---
 
