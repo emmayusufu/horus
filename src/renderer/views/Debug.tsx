@@ -7,6 +7,7 @@ import { RelatedList } from '../components/RelatedList'
 import { HelmBanner } from '../components/HelmBanner'
 import { PodConditions } from '../components/PodConditions'
 import { ContainerStates } from '../components/ContainerStates'
+import { PodYamlView } from '../components/PodYamlView'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -77,6 +78,7 @@ export function Debug({ resource, onBack }: DebugProps) {
       <LogViewer logs={detail.logs} cluster={resource.cluster} namespace={resource.namespace} podName={resource.name} />
       <ResourceUsage {...detail.resources} />
       <RelatedList related={detail.related} />
+      {resource.kind === 'Pod' && <PodYamlView cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />}
     </div>
   )
 }
