@@ -8,7 +8,12 @@ import type {
   LogChunk,
   RolloutInfo,
   NodeInfo,
-  CronJobRun
+  CronJobRun,
+  TrafficPath,
+  HPAInfo,
+  PVCInfo,
+  ResourceQuota,
+  ConfigCheck
 } from '../../shared/types'
 
 export function useK8s() {
@@ -41,6 +46,11 @@ export function useK8s() {
     getRollout: (cluster: string, ns: string, name: string): Promise<RolloutInfo> => api.getRollout(cluster, ns, name),
     getNodes: (cluster: string): Promise<NodeInfo[]> => api.getNodes(cluster),
     getCronJobRuns: (cluster: string, ns: string, name: string): Promise<CronJobRun[]> => api.getCronJobRuns(cluster, ns, name),
-    getResourceYaml: (cluster: string, ns: string, name: string, kind: string): Promise<string> => api.getResourceYaml(cluster, ns, name, kind)
+    getResourceYaml: (cluster: string, ns: string, name: string, kind: string): Promise<string> => api.getResourceYaml(cluster, ns, name, kind),
+    getTrafficPath: (cluster: string, ns: string, serviceName: string): Promise<TrafficPath> => api.getTrafficPath(cluster, ns, serviceName),
+    getHPAs: (cluster: string, ns: string): Promise<HPAInfo[]> => api.getHPAs(cluster, ns),
+    getPVCs: (cluster: string, ns: string): Promise<PVCInfo[]> => api.getPVCs(cluster, ns),
+    getResourceQuotas: (cluster: string, ns: string): Promise<ResourceQuota[]> => api.getResourceQuotas(cluster, ns),
+    getConfigChecks: (cluster: string, ns: string): Promise<ConfigCheck[]> => api.getConfigChecks(cluster, ns)
   }
 }

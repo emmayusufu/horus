@@ -10,6 +10,7 @@ import { ContainerStates } from '../components/ContainerStates'
 import { PodYamlView } from '../components/PodYamlView'
 import { RolloutStatus } from '../components/RolloutStatus'
 import { CronJobRuns } from '../components/CronJobRuns'
+import { TrafficPath } from '../components/TrafficPath'
 import { useK8s } from '../hooks/useK8s'
 import type { K8sResource, ResourceDetail } from '../../shared/types'
 
@@ -138,6 +139,9 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
             namespace={resource.namespace}
             podName={resource.name}
           />
+          {resource.kind === 'Service' && (
+            <TrafficPath cluster={resource.cluster} namespace={resource.namespace} serviceName={resource.name} />
+          )}
           {resource.kind === 'Deployment' && (
             <RolloutStatus cluster={resource.cluster} namespace={resource.namespace} name={resource.name} />
           )}

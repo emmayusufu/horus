@@ -3,6 +3,10 @@ import { HTMLSelect, NonIdealState, Button } from '@blueprintjs/core'
 import { Column, Table2, Cell } from '@blueprintjs/table'
 import { HelmBanner } from '../components/HelmBanner'
 import { NamespaceEvents } from '../components/NamespaceEvents'
+import { HPAStatus } from '../components/HPAStatus'
+import { PVCList } from '../components/PVCList'
+import { QuotaView } from '../components/QuotaView'
+import { ConfigChecks } from '../components/ConfigChecks'
 import { parseHelmLabels } from '../../shared/helm'
 import type { K8sResource, ResourceKind } from '../../shared/types'
 
@@ -44,6 +48,7 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes }: E
   const [kind, setKind] = useState<ResourceKind | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showEvents, setShowEvents] = useState(false)
+  const [showInsights, setShowInsights] = useState(false)
 
   const namespaces = useMemo(() => {
     const ns = new Set(resources.map((r) => r.namespace))
@@ -101,9 +106,30 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes }: E
             onClick={() => setShowEvents(!showEvents)}
           />
         )}
+        {namespace !== 'all' && (
+          <Button
+            small
+            icon="dashboard"
+            text={showInsights ? 'Hide Insights' : 'Insights'}
+            active={showInsights}
+            onClick={() => setShowInsights(!showInsights)}
+          />
+        )}
         {onShowNodes && <Button small icon="cloud" text="Nodes" onClick={onShowNodes} />}
       </div>
       {showEvents && namespace !== 'all' && <NamespaceEvents cluster={cluster} namespace={namespace} />}
+      {showInsights && namespace !== 'all' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div>
+            <HPAStatus cluster={cluster} namespace={namespace} />
+            <QuotaView cluster={cluster} namespace={namespace} />
+          </div>
+          <div>
+            <PVCList cluster={cluster} namespace={namespace} />
+            <ConfigChecks cluster={cluster} namespace={namespace} />
+          </div>
+        </div>
+      )}
       {helmInfo && <HelmBanner helm={helmInfo} />}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Table2

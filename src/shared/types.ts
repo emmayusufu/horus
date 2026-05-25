@@ -152,6 +152,48 @@ export interface DiffResult {
   right: string
 }
 
+export interface TrafficPath {
+  ingress?: { name: string; host: string; path: string; serviceName: string }
+  service: { name: string; type: string; clusterIP: string; externalIP?: string; ports: string[] }
+  endpoints: { ready: number; notReady: number; addresses: string[] }
+  pods: { name: string; ready: boolean; status: string }[]
+}
+
+export interface HPAInfo {
+  name: string
+  targetKind: string
+  targetName: string
+  minReplicas: number
+  maxReplicas: number
+  currentReplicas: number
+  desiredReplicas: number
+  metrics: { name: string; current: string; target: string }[]
+}
+
+export interface PVCInfo {
+  name: string
+  namespace: string
+  status: string
+  capacity: string
+  storageClass: string
+  accessModes: string[]
+  volumeName: string
+  pods: string[]
+}
+
+export interface ResourceQuota {
+  name: string
+  namespace: string
+  items: { resource: string; used: string; hard: string }[]
+}
+
+export interface ConfigCheck {
+  name: string
+  namespace: string
+  kind: string
+  issues: string[]
+}
+
 export interface LogChunk {
   streamId: string
   data: string
@@ -183,6 +225,11 @@ export interface HorusAPI {
   getNodes: (cluster: string) => Promise<NodeInfo[]>
   getCronJobRuns: (cluster: string, namespace: string, name: string) => Promise<CronJobRun[]>
   getResourceYaml: (cluster: string, namespace: string, name: string, kind: string) => Promise<string>
+  getTrafficPath: (cluster: string, namespace: string, serviceName: string) => Promise<TrafficPath>
+  getHPAs: (cluster: string, namespace: string) => Promise<HPAInfo[]>
+  getPVCs: (cluster: string, namespace: string) => Promise<PVCInfo[]>
+  getResourceQuotas: (cluster: string, namespace: string) => Promise<ResourceQuota[]>
+  getConfigChecks: (cluster: string, namespace: string) => Promise<ConfigCheck[]>
 }
 
 declare global {

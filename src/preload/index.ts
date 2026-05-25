@@ -27,6 +27,11 @@ const api: HorusAPI = {
   getNodes: (cluster) => ipcRenderer.invoke('k8s:get-nodes', cluster),
   getCronJobRuns: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-cronjob-runs', cluster, namespace, name),
   getResourceYaml: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:get-resource-yaml', cluster, namespace, name, kind),
+  getTrafficPath: (cluster, namespace, serviceName) => ipcRenderer.invoke('k8s:get-traffic-path', cluster, namespace, serviceName),
+  getHPAs: (cluster, namespace) => ipcRenderer.invoke('k8s:get-hpas', cluster, namespace),
+  getPVCs: (cluster, namespace) => ipcRenderer.invoke('k8s:get-pvcs', cluster, namespace),
+  getResourceQuotas: (cluster, namespace) => ipcRenderer.invoke('k8s:get-resource-quotas', cluster, namespace),
+  getConfigChecks: (cluster, namespace) => ipcRenderer.invoke('k8s:get-config-checks', cluster, namespace),
   onLogChunk: (callback) => {
     const handler = (_event: any, chunk: any) => callback(chunk)
     ipcRenderer.on('k8s:log-chunk', handler)

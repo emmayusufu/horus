@@ -6,6 +6,7 @@ export interface ClusterClient {
   appsApi: k8s.AppsV1Api
   batchApi: k8s.BatchV1Api
   networkApi: k8s.NetworkingV1Api
+  autoscalingApi: k8s.AutoscalingV2Api
   metricsAvailable: boolean
 }
 
@@ -43,6 +44,7 @@ export function connectCluster(context: string): ClusterClient {
     appsApi: kc.makeApiClient(k8s.AppsV1Api),
     batchApi: kc.makeApiClient(k8s.BatchV1Api),
     networkApi: kc.makeApiClient(k8s.NetworkingV1Api),
+    autoscalingApi: kc.makeApiClient(k8s.AutoscalingV2Api),
     metricsAvailable: false
   }
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Card, H5, Tag, Intent } from '@blueprintjs/core'
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts'
 import { useK8s } from '../hooks/useK8s'
 import type { HPAInfo } from '../../shared/types'
 
@@ -22,11 +21,6 @@ export function HPAStatus({ cluster, namespace }: HPAStatusProps) {
       {hpas.map((h) => {
         const pct = h.maxReplicas > 0 ? Math.round((h.currentReplicas / h.maxReplicas) * 100) : 0
         const scaling = h.desiredReplicas !== h.currentReplicas
-        const chartData = [
-          { name: 'Current', value: h.currentReplicas, color: '#3d9a5f' },
-          { name: 'Desired', value: h.desiredReplicas, color: scaling ? '#cc8d35' : '#3d9a5f' },
-          { name: 'Max', value: h.maxReplicas, color: 'var(--border)' }
-        ]
 
         return (
           <div key={h.name} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
