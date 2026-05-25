@@ -83,7 +83,7 @@ function colorizeJsonLine(line: string): React.ReactNode {
     return (
       <>
         {indent}
-        <span style={{ color: '#8ABBFF' }}>"{key}"</span>
+        <span style={{ color: '#7a9ec2' }}>"{key}"</span>
         {colon}
         {colorizeValue(rest)}
       </>
@@ -101,7 +101,7 @@ function colorizeValue(text: string): React.ReactNode {
     return (
       <>
         {leading}
-        <span style={{ color: '#62D96B' }}>{trimmed}</span>
+        <span style={{ color: '#7d9e82' }}>{trimmed}</span>
         {trailing}
       </>
     )
@@ -109,7 +109,7 @@ function colorizeValue(text: string): React.ReactNode {
     return (
       <>
         {leading}
-        <span style={{ color: '#FBB360' }}>{trimmed}</span>
+        <span style={{ color: '#b0935a' }}>{trimmed}</span>
         {trailing}
       </>
     )
@@ -117,7 +117,7 @@ function colorizeValue(text: string): React.ReactNode {
     return (
       <>
         {leading}
-        <span style={{ color: '#F5498B' }}>{trimmed}</span>
+        <span style={{ color: '#9e6070' }}>{trimmed}</span>
         {trailing}
       </>
     )
@@ -125,7 +125,7 @@ function colorizeValue(text: string): React.ReactNode {
     return (
       <>
         {leading}
-        <span style={{ color: '#AD99FF' }}>{trimmed}</span>
+        <span style={{ color: '#8a80b8' }}>{trimmed}</span>
         {trailing}
       </>
     )
