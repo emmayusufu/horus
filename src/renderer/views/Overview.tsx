@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Card, NonIdealState, Tag, Intent, Button } from '@blueprintjs/core'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { NonIdealState, Button } from '@blueprintjs/core'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { K8sResource, ClusterInfo } from '../../shared/types'
 
 interface OverviewProps {
@@ -11,244 +11,165 @@ interface OverviewProps {
   onSelectResource: (resource: K8sResource) => void
 }
 
-const HEALTH_COLORS = { healthy: '#32A467', warning: '#D4A017', critical: '#E76A6E' }
-
-const PAGE_SIZE = 10
+const PAGE_SIZE = 8
 
 export function Overview({ clusters, unhealthy, allResources, onSelectCluster, onSelectResource }: OverviewProps) {
   const [page, setPage] = useState(0)
 
   if (clusters.length === 0) {
     return (
-      <NonIdealState
-        icon="offline"
-        title="No clusters connected"
-        description="Horus connects to all clusters in your kubeconfig on launch"
-      />
+      <div className="ov">
+        <NonIdealState icon="offline" title="No clusters" description="Horus connects to all clusters in your kubeconfig on launch" />
+      </div>
     )
   }
 
-  const totalResources = allResources.length
-  const healthyCt = allResources.filter((r) => r.health === 'healthy').length
-  const warningCt = allResources.filter((r) => r.health === 'warning').length
-  const criticalCt = allResources.filter((r) => r.health === 'critical').length
-
-  const healthData = [
-    { name: 'Healthy', value: healthyCt, color: HEALTH_COLORS.healthy },
-    { name: 'Warning', value: warningCt, color: HEALTH_COLORS.warning },
-    { name: 'Critical', value: criticalCt, color: HEALTH_COLORS.critical }
-  ].filter((d) => d.value > 0)
+  const total = allResources.length
+  const healthy = allResources.filter((r) => r.health === 'healthy').length
+  const warning = allResources.filter((r) => r.health === 'warning').length
+  const critical = allResources.filter((r) => r.health === 'critical').length
+  const healthPct = total > 0 ? Math.round((healthy / total) * 100) : 0
 
   const kindCounts = new Map<string, number>()
-  for (const r of allResources) {
-    kindCounts.set(r.kind, (kindCounts.get(r.kind) ?? 0) + 1)
-  }
+  for (const r of allResources) kindCounts.set(r.kind, (kindCounts.get(r.kind) ?? 0) + 1)
   const kindData = [...kindCounts.entries()].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count)
 
+  const circumference = 2 * Math.PI * 52
+  const healthyOffset = circumference - (circumference * healthy) / (total || 1)
+  const warningOffset = circumference - (circumference * warning) / (total || 1)
+  const criticalOffset = circumference - (circumference * critical) / (total || 1)
+
   return (
-    <div className="overview-page">
-      <div className="overview-stats">
-        <StatCard label="Clusters" value={clusters.length} />
-        <StatCard label="Resources" value={totalResources} />
-        <StatCard label="Healthy" value={healthyCt} color={HEALTH_COLORS.healthy} />
-        <StatCard label="Warning" value={warningCt} color={warningCt > 0 ? HEALTH_COLORS.warning : undefined} />
-        <StatCard label="Critical" value={criticalCt} color={criticalCt > 0 ? HEALTH_COLORS.critical : undefined} />
+    <div className="ov">
+      <div className="ov-hero">
+        <div className="ov-ring-section">
+          <svg viewBox="0 0 120 120" className="ov-ring">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" strokeWidth="6" />
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#e5564f" strokeWidth="6"
+              strokeDasharray={circumference} strokeDashoffset={criticalOffset}
+              strokeLinecap="round" transform="rotate(-90 60 60)" className="ov-ring-segment" style={{ animationDelay: '0.4s' }} />
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#cc8d35" strokeWidth="6"
+              strokeDasharray={circumference} strokeDashoffset={warningOffset}
+              strokeLinecap="round" transform={`rotate(${-90 + (critical / (total || 1)) * 360} 60 60)`} className="ov-ring-segment" style={{ animationDelay: '0.6s' }} />
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#3d9a5f" strokeWidth="6"
+              strokeDasharray={circumference} strokeDashoffset={healthyOffset}
+              strokeLinecap="round" transform={`rotate(${-90 + ((critical + warning) / (total || 1)) * 360} 60 60)`} className="ov-ring-segment" style={{ animationDelay: '0.2s' }} />
+          </svg>
+          <div className="ov-ring-center">
+            <span className="ov-ring-pct">{healthPct}</span>
+            <span className="ov-ring-label">% healthy</span>
+          </div>
+        </div>
+
+        <div className="ov-metrics">
+          <div className="ov-metric ov-fade" style={{ animationDelay: '0.1s' }}>
+            <span className="ov-metric-val">{total}</span>
+            <span className="ov-metric-label">resources</span>
+          </div>
+          <div className="ov-metric ov-fade" style={{ animationDelay: '0.2s' }}>
+            <span className="ov-metric-val" style={{ color: '#3d9a5f' }}>{healthy}</span>
+            <span className="ov-metric-label">healthy</span>
+          </div>
+          <div className="ov-metric ov-fade" style={{ animationDelay: '0.3s' }}>
+            <span className="ov-metric-val" style={{ color: warning > 0 ? '#cc8d35' : undefined }}>{warning}</span>
+            <span className="ov-metric-label">warning</span>
+          </div>
+          <div className="ov-metric ov-fade" style={{ animationDelay: '0.4s' }}>
+            <span className="ov-metric-val" style={{ color: critical > 0 ? '#e5564f' : undefined }}>{critical}</span>
+            <span className="ov-metric-label">critical</span>
+          </div>
+        </div>
       </div>
 
-      <div className="overview-charts">
-        <Card className="overview-chart-card">
-          <div className="overview-chart-title">Health Distribution</div>
-          {healthData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={healthData}
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={78}
-                  paddingAngle={4}
-                  strokeWidth={0}
-                  cornerRadius={4}
-                >
-                  {healthData.map((d, i) => (
-                    <Cell key={i} fill={d.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: '#252A31',
-                    border: '1px solid #383E47',
-                    borderRadius: 8,
-                    padding: '8px 12px'
-                  }}
-                  itemStyle={{ color: '#F6F7F9' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="bp6-text-muted">No data</span>
-            </div>
-          )}
-        </Card>
+      <div className="ov-grid">
+        <div className="ov-panel ov-fade" style={{ animationDelay: '0.3s' }}>
+          <div className="ov-panel-head">Clusters</div>
+          {clusters.map((c) => {
+            const issues = c.resourceCounts.critical + c.resourceCounts.warning
+            const clr = !c.connected ? '#e5564f' : issues > 0 ? '#cc8d35' : '#3d9a5f'
+            return (
+              <div key={c.name} className="ov-cluster" onClick={() => onSelectCluster(c.name)}>
+                <div className="ov-cluster-left">
+                  <span className="ov-pulse" style={{ background: clr, boxShadow: `0 0 6px ${clr}` }} />
+                  <span className="monospace">{c.name}</span>
+                </div>
+                <div className="ov-cluster-right">
+                  <span className="ov-cluster-detail">
+                    {!c.connected ? 'unreachable' : issues > 0 ? `${issues} issues` : `${c.resourceCounts.total} resources`}
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: 0.3 }}>
+                    <path d="M6 3l5 5-5 5" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+            )
+          })}
+        </div>
 
-        <Card className="overview-chart-card">
-          <div className="overview-chart-title">Resources by Kind</div>
-          {kindData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={kindData} layout="vertical" margin={{ left: 10, right: 16, top: 8, bottom: 8 }}>
+        <div className="ov-panel ov-fade" style={{ animationDelay: '0.4s' }}>
+          <div className="ov-panel-head">Resources by Kind</div>
+          {kindData.length > 0 && (
+            <ResponsiveContainer width="100%" height={kindData.length * 28 + 16}>
+              <BarChart data={kindData} layout="vertical" margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
                 <XAxis type="number" hide />
-                <YAxis
-                  type="category"
-                  dataKey="kind"
-                  width={90}
-                  tick={{ fill: '#A7B6C2', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
+                <YAxis type="category" dataKey="kind" width={85} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: '#252A31', border: '1px solid #383E47', borderRadius: 4 }}
-                  itemStyle={{ color: '#F6F7F9' }}
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12 }}
+                  itemStyle={{ color: 'var(--text-primary)' }}
+                  cursor={{ fill: 'var(--log-hover)' }}
                 />
-                <Bar dataKey="count" fill="#5C7080" radius={[0, 6, 6, 0]} barSize={16} />
+                <Bar dataKey="count" fill="#3d9a5f" radius={[0, 4, 4, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="bp6-text-muted">No data</span>
-            </div>
           )}
-        </Card>
-
-        <Card className="overview-chart-card">
-          <div className="overview-chart-title">Clusters</div>
-          <div style={{ maxHeight: 180, overflow: 'auto' }}>
-            {clusters.map((c) => {
-              const issues = c.resourceCounts.critical + c.resourceCounts.warning
-              return (
-                <div key={c.name} className="overview-cluster-row" onClick={() => onSelectCluster(c.name)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div
-                      className="timeline-dot"
-                      style={{
-                        width: 6,
-                        height: 6,
-                        background: !c.connected
-                          ? HEALTH_COLORS.critical
-                          : issues > 0
-                            ? HEALTH_COLORS.warning
-                            : HEALTH_COLORS.healthy
-                      }}
-                    />
-                    <span className="monospace" style={{ fontSize: 12 }}>
-                      {c.name}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="bp6-text-muted" style={{ fontSize: 11 }}>
-                      {!c.connected
-                        ? 'unreachable'
-                        : issues > 0
-                          ? `${issues} issues`
-                          : `${c.resourceCounts.total} resources`}
-                    </span>
-                    <span className="bp6-icon bp6-icon-chevron-right bp6-text-muted" style={{ opacity: 0.4 }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
+        </div>
       </div>
 
       {unhealthy.length > 0 && (
-        <div>
-          <div className="overview-section-title">
+        <div className="ov-fade" style={{ animationDelay: '0.5s' }}>
+          <div className="ov-panel-head" style={{ marginBottom: 10 }}>
             Needs Attention
-            <Tag minimal round intent={Intent.DANGER} style={{ marginLeft: 8 }}>
-              {unhealthy.length}
-            </Tag>
+            <span className="ov-badge-critical">{unhealthy.length}</span>
           </div>
-          <Card style={{ padding: 0, overflow: 'hidden', borderRadius: 12 }}>
-            <table className="overview-table">
-              <thead>
-                <tr>
-                  <th style={{ width: 20 }}></th>
-                  <th>Name</th>
-                  <th>Kind</th>
-                  <th>Status</th>
-                  <th>Cluster</th>
-                  <th>Namespace</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unhealthy.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((r) => (
-                  <tr key={r.uid} onClick={() => onSelectResource(r)}>
-                    <td>
-                      <div
-                        className="timeline-dot"
-                        style={{
-                          width: 6,
-                          height: 6,
-                          background: r.health === 'critical' ? HEALTH_COLORS.critical : HEALTH_COLORS.warning
-                        }}
-                      />
-                    </td>
-                    <td className="monospace">{r.name}</td>
-                    <td>{r.kind}</td>
-                    <td>{r.status}</td>
-                    <td className="monospace">{r.cluster}</td>
-                    <td className="monospace">{r.namespace}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {unhealthy.length > PAGE_SIZE && (
-              <div className="overview-pagination">
-                <Button small minimal icon="chevron-left" disabled={page === 0} onClick={() => setPage(page - 1)} />
-                <span className="bp6-text-muted" style={{ fontSize: 12 }}>
-                  {page * PAGE_SIZE + 1}--{Math.min((page + 1) * PAGE_SIZE, unhealthy.length)} of {unhealthy.length}
-                </span>
-                <Button
-                  small
-                  minimal
-                  icon="chevron-right"
-                  disabled={(page + 1) * PAGE_SIZE >= unhealthy.length}
-                  onClick={() => setPage(page + 1)}
-                />
+          <div className="ov-alerts">
+            {unhealthy.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((r) => (
+              <div key={r.uid} className="ov-alert" onClick={() => onSelectResource(r)}>
+                <div className="ov-alert-indicator" style={{ background: r.health === 'critical' ? '#e5564f' : '#cc8d35' }} />
+                <div className="ov-alert-body">
+                  <div className="ov-alert-name monospace">{r.name}</div>
+                  <div className="ov-alert-meta">
+                    <span>{r.kind}</span>
+                    <span className="ov-alert-status" style={{ color: r.health === 'critical' ? '#e5564f' : '#cc8d35' }}>{r.status}</span>
+                    <span className="monospace">{r.namespace}</span>
+                  </div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: 0.3, flexShrink: 0 }}>
+                  <path d="M6 3l5 5-5 5" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
               </div>
-            )}
-          </Card>
+            ))}
+          </div>
+          {unhealthy.length > PAGE_SIZE && (
+            <div className="overview-pagination">
+              <Button small minimal icon="chevron-left" disabled={page === 0} onClick={() => setPage(page - 1)} />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {page * PAGE_SIZE + 1} - {Math.min((page + 1) * PAGE_SIZE, unhealthy.length)} of {unhealthy.length}
+              </span>
+              <Button small minimal icon="chevron-right" disabled={(page + 1) * PAGE_SIZE >= unhealthy.length} onClick={() => setPage(page + 1)} />
+            </div>
+          )}
         </div>
       )}
 
       {unhealthy.length === 0 && (
-        <Card
-          style={{
-            padding: 24,
-            textAlign: 'center',
-            borderRadius: 12,
-            background: 'rgba(50, 164, 103, 0.08)',
-            border: '1px solid rgba(50, 164, 103, 0.15)'
-          }}
-        >
-          <span style={{ color: HEALTH_COLORS.healthy, fontSize: 14 }}>All resources healthy</span>
-        </Card>
+        <div className="ov-all-clear ov-fade" style={{ animationDelay: '0.5s' }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" style={{ color: '#3d9a5f' }}>
+            <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M6 10l3 3 5-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          All resources healthy
+        </div>
       )}
     </div>
-  )
-}
-
-function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
-  return (
-    <Card className="overview-stat-card">
-      <div className="overview-stat-value" style={color ? { color } : undefined}>
-        {value}
-      </div>
-      <div className="overview-stat-label">{label}</div>
-    </Card>
   )
 }
