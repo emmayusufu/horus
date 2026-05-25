@@ -114,15 +114,13 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
             onClick={() => setShowEvents(!showEvents)}
           />
         )}
-        {namespace !== 'all' && (
-          <Button
-            small
-            icon="dashboard"
-            text={showInsights ? 'Hide Insights' : 'Insights'}
-            active={showInsights}
-            onClick={() => setShowInsights(!showInsights)}
-          />
-        )}
+        <Button
+          small
+          icon="dashboard"
+          text={showInsights ? 'Hide Insights' : 'Insights'}
+          active={showInsights}
+          onClick={() => setShowInsights(!showInsights)}
+        />
         {onShowNodes && <Button small icon="cloud" text="Nodes" onClick={onShowNodes} />}
         {onShowSecurity && <Button small icon="shield" text="Security" onClick={onShowSecurity} />}
       </div>
