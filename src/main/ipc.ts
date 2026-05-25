@@ -19,6 +19,24 @@ import type {
 } from '../shared/types'
 import { writeFileSync } from 'fs'
 
+function parseCpu(val: string): number {
+  if (!val) return 0
+  if (val.endsWith('m')) return parseInt(val) / 1000
+  if (val.endsWith('n')) return parseInt(val) / 1_000_000_000
+  return parseFloat(val) || 0
+}
+
+function parseMem(val: string): number {
+  if (!val) return 0
+  const num = parseFloat(val)
+  if (val.endsWith('Gi')) return num
+  if (val.endsWith('Mi')) return num / 1024
+  if (val.endsWith('Ki')) return num / (1024 * 1024)
+  if (val.endsWith('G')) return num
+  if (val.endsWith('M')) return num / 1000
+  return num / (1024 * 1024 * 1024)
+}
+
 function toISO(val: any): string {
   if (!val) return ''
   if (typeof val === 'string') return val
@@ -822,24 +840,32 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   })
 
   ipcMain.handle('k8s:get-cost-estimates', async (_event, cluster: string) => {
-    const resources = cache.getAll(cluster)
+    const client = getClient(cluster)
+    if (!client) throw new Error(`Not connected to ${cluster}`)
+
+    const pods = await client.coreApi.listPodForAllNamespaces()
     const byNs = new Map<string, { cpu: number; mem: number; pods: number }>()
 
-    for (const r of resources) {
-      if (r.kind !== 'Pod') continue
-      const ns = r.namespace
+    for (const pod of pods.items) {
+      const ns = pod.metadata?.namespace ?? ''
       const entry = byNs.get(ns) ?? { cpu: 0, mem: 0, pods: 0 }
       entry.pods++
-      entry.cpu += 0.25
-      entry.mem += 0.5
+
+      for (const c of pod.spec?.containers ?? []) {
+        const cpuReq = c.resources?.requests?.cpu ?? c.resources?.limits?.cpu ?? ''
+        const memReq = c.resources?.requests?.memory ?? c.resources?.limits?.memory ?? ''
+        entry.cpu += parseCpu(cpuReq)
+        entry.mem += parseMem(memReq)
+      }
+
       byNs.set(ns, entry)
     }
 
     return [...byNs.entries()].map(([namespace, data]) => ({
       namespace,
-      cpuCores: data.cpu,
-      memoryGB: data.mem,
-      monthlyCost: Math.round((data.cpu * 0.048 + data.mem * 0.006) * 730 * 100) / 100,
+      cpuCores: Math.round(data.cpu * 100) / 100,
+      memoryGB: Math.round(data.mem * 100) / 100,
+      monthlyCost: Math.round((data.cpu * 31.29 + data.mem * 4.38) * 100) / 100,
       pods: data.pods
     })).sort((a, b) => b.monthlyCost - a.monthlyCost)
   })
