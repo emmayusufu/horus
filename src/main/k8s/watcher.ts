@@ -141,14 +141,14 @@ export async function startWatching(context: string, onUpdate: WatchCallback): P
             }
             emitUpdate()
           },
-          (err: any) => {
+          () => {
             if (abort.signal.aborted) return
             retryDelay = Math.min(retryDelay * 2, 30_000)
             setTimeout(startWatch, retryDelay)
           }
         )
         retryDelay = 1000
-      } catch (err) {
+      } catch {
         if (abort.signal.aborted) return
         retryDelay = Math.min(retryDelay * 2, 30_000)
         setTimeout(startWatch, retryDelay)

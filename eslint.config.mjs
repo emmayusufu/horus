@@ -11,7 +11,8 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      'no-console': ['warn', { allow: ['error'] }]
+      'no-console': ['warn', { allow: ['error'] }],
+      'no-empty': ['error', { allowEmptyCatch: true }]
     }
   }
 )
