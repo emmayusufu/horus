@@ -21,9 +21,7 @@ import type {
   RootCause,
   TopologyNode,
   TopologyEdge,
-  CostEstimate,
-  HelmRelease,
-  SizingRec,
+  SizingResult,
   RequestTrace
 } from '../../shared/types'
 
@@ -57,7 +55,6 @@ export function useK8s() {
     getRollout: (cluster: string, ns: string, name: string): Promise<RolloutInfo> => api.getRollout(cluster, ns, name),
     getNodes: (cluster: string): Promise<NodeInfo[]> => api.getNodes(cluster),
     getCronJobRuns: (cluster: string, ns: string, name: string): Promise<CronJobRun[]> => api.getCronJobRuns(cluster, ns, name),
-    getResourceYaml: (cluster: string, ns: string, name: string, kind: string): Promise<string> => api.getResourceYaml(cluster, ns, name, kind),
     getTrafficPath: (cluster: string, ns: string, serviceName: string): Promise<TrafficPath> => api.getTrafficPath(cluster, ns, serviceName),
     getHPAs: (cluster: string, ns: string): Promise<HPAInfo[]> => api.getHPAs(cluster, ns),
     getPVCs: (cluster: string, ns: string): Promise<PVCInfo[]> => api.getPVCs(cluster, ns),
@@ -74,9 +71,7 @@ export function useK8s() {
     getGlobalEvents: (cluster: string, query: string): Promise<K8sEvent[]> => api.getGlobalEvents(cluster, query),
     analyzeRootCause: (cluster: string, ns: string, name: string, kind: string): Promise<RootCause> => api.analyzeRootCause(cluster, ns, name, kind),
     getTopology: (cluster: string, ns: string): Promise<{ nodes: TopologyNode[]; edges: TopologyEdge[] }> => api.getTopology(cluster, ns),
-    getCostEstimates: (cluster: string): Promise<CostEstimate[]> => api.getCostEstimates(cluster),
-    getHelmReleases: (cluster: string): Promise<HelmRelease[]> => api.getHelmReleases(cluster),
-    getSizingRecs: (cluster: string, ns: string): Promise<SizingRec[]> => api.getSizingRecs(cluster, ns),
+    getSizingRecs: (cluster: string, ns: string): Promise<SizingResult> => api.getSizingRecs(cluster, ns),
     traceRequest: (cluster: string, host: string): Promise<RequestTrace> => api.traceRequest(cluster, host)
   }
 }

@@ -146,11 +146,6 @@ export interface CronJobRun {
   pods: number
 }
 
-export interface DiffResult {
-  path: string
-  left: string
-  right: string
-}
 
 export interface TrafficPath {
   ingress?: { name: string; host: string; path: string; serviceName: string }
@@ -243,47 +238,42 @@ export interface TopologyEdge {
   label?: string
 }
 
-export interface CostEstimate {
-  namespace: string
-  cpuCores: number
-  memoryGB: number
-  monthlyCost: number
-  pods: number
-}
-
-export interface HelmRelease {
-  name: string
-  namespace: string
-  chart: string
-  version: string
-  revision: number
-  status: string
-  updated: string
-}
-
 export interface SizingRec {
   pod: string
   namespace: string
   container: string
   cpuRequest: string
   cpuActual: string
+  cpuPct: number
   memRequest: string
   memActual: string
-  cpuSaving: string
-  memSaving: string
+  memPct: number
+  flag: 'over' | 'tight' | 'ok'
 }
 
-export interface RequestTraceHop {
-  name: string
-  kind: string
+export interface SizingResult {
+  metricsAvailable: boolean
+  recs: SizingRec[]
+}
+
+export interface TraceNode {
+  id: string
+  kind: 'Host' | 'LoadBalancer' | 'Path' | 'Service' | 'Endpoints' | 'Pod'
+  label: string
+  sublabel?: string
   status: 'ok' | 'warning' | 'error'
-  detail: string
   issues: string[]
+}
+
+export interface TraceEdge {
+  from: string
+  to: string
 }
 
 export interface RequestTrace {
   url: string
-  hops: RequestTraceHop[]
+  nodes: TraceNode[]
+  edges: TraceEdge[]
   rootCause: string
   suggestion: string
 }
@@ -327,7 +317,6 @@ export interface HorusAPI {
   getRollout: (cluster: string, namespace: string, name: string) => Promise<RolloutInfo>
   getNodes: (cluster: string) => Promise<NodeInfo[]>
   getCronJobRuns: (cluster: string, namespace: string, name: string) => Promise<CronJobRun[]>
-  getResourceYaml: (cluster: string, namespace: string, name: string, kind: string) => Promise<string>
   getTrafficPath: (cluster: string, namespace: string, serviceName: string) => Promise<TrafficPath>
   getHPAs: (cluster: string, namespace: string) => Promise<HPAInfo[]>
   getPVCs: (cluster: string, namespace: string) => Promise<PVCInfo[]>
@@ -344,9 +333,7 @@ export interface HorusAPI {
   getGlobalEvents: (cluster: string, query: string) => Promise<K8sEvent[]>
   analyzeRootCause: (cluster: string, namespace: string, name: string, kind: string) => Promise<RootCause>
   getTopology: (cluster: string, namespace: string) => Promise<{ nodes: TopologyNode[]; edges: TopologyEdge[] }>
-  getCostEstimates: (cluster: string) => Promise<CostEstimate[]>
-  getHelmReleases: (cluster: string) => Promise<HelmRelease[]>
-  getSizingRecs: (cluster: string, namespace: string) => Promise<SizingRec[]>
+  getSizingRecs: (cluster: string, namespace: string) => Promise<SizingResult>
   traceRequest: (cluster: string, host: string) => Promise<RequestTrace>
 }
 

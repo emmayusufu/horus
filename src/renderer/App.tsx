@@ -5,7 +5,6 @@ import { Overview } from './views/Overview'
 import { Explore } from './views/Explore'
 import { Debug } from './views/Debug'
 import { NodeView } from './views/NodeView'
-import { DiffView } from './views/DiffView'
 import { SecurityView } from './views/SecurityView'
 import { GlobalEvents } from './views/GlobalEvents'
 import { RequestTracer } from './views/RequestTracer'
@@ -18,7 +17,6 @@ type View =
   | { type: 'explore'; cluster: string }
   | { type: 'debug'; resource: K8sResource }
   | { type: 'nodes'; cluster: string }
-  | { type: 'diff' }
   | { type: 'security'; cluster: string }
   | { type: 'events' }
   | { type: 'trace' }
@@ -104,9 +102,6 @@ export function App() {
   if (view.type === 'trace') {
     breadcrumbs.push({ text: 'Trace' })
   }
-  if (view.type === 'diff') {
-    breadcrumbs.push({ text: 'Compare' })
-  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -115,8 +110,6 @@ export function App() {
         onCommandPalette={() => setPaletteOpen(true)}
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode(!darkMode)}
-        showCompare={clusters.length >= 2}
-        onCompare={() => setView({ type: 'diff' })}
         onEvents={() => setView({ type: 'events' })}
         onTrace={() => setView({ type: 'trace' })}
       />
@@ -175,13 +168,6 @@ export function App() {
       {view.type === 'trace' && (
         <RequestTracer
           clusters={clusters.map((c) => c.name)}
-          onBack={() => setView({ type: 'overview' })}
-        />
-      )}
-      {view.type === 'diff' && (
-        <DiffView
-          clusters={clusters.map((c) => c.name)}
-          resources={allResources()}
           onBack={() => setView({ type: 'overview' })}
         />
       )}

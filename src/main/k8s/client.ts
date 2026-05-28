@@ -8,6 +8,7 @@ export interface ClusterClient {
   networkApi: k8s.NetworkingV1Api
   autoscalingApi: k8s.AutoscalingV2Api
   rbacApi: k8s.RbacAuthorizationV1Api
+  discoveryApi: k8s.DiscoveryV1Api
   metricsAvailable: boolean
 }
 
@@ -47,6 +48,7 @@ export function connectCluster(context: string): ClusterClient {
     networkApi: kc.makeApiClient(k8s.NetworkingV1Api),
     autoscalingApi: kc.makeApiClient(k8s.AutoscalingV2Api),
     rbacApi: kc.makeApiClient(k8s.RbacAuthorizationV1Api),
+    discoveryApi: kc.makeApiClient(k8s.DiscoveryV1Api),
     metricsAvailable: false
   }
 

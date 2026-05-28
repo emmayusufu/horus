@@ -369,31 +369,24 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     })
   })
 
-  ipcMain.handle('k8s:get-resource-yaml', async (_event, cluster: string, namespace: string, name: string, kind: string) => {
-    const client = getClient(cluster)
-    if (!client) throw new Error(`Not connected to ${cluster}`)
-
-    let resource: any
-    switch (kind) {
-      case 'Pod': resource = await client.coreApi.readNamespacedPod({ name, namespace }); break
-      case 'Deployment': resource = await client.appsApi.readNamespacedDeployment({ name, namespace }); break
-      case 'Service': resource = await client.coreApi.readNamespacedService({ name, namespace }); break
-      case 'ConfigMap': resource = await client.coreApi.readNamespacedConfigMap({ name, namespace }); break
-      case 'Job': resource = await client.batchApi.readNamespacedJob({ name, namespace }); break
-      default: throw new Error(`Unsupported kind: ${kind}`)
-    }
-    return JSON.stringify(resource, null, 2)
-  })
-
   ipcMain.handle('k8s:get-traffic-path', async (_event, cluster: string, namespace: string, serviceName: string) => {
     const client = getClient(cluster)
     if (!client) throw new Error(`Not connected to ${cluster}`)
 
     const svc = await client.coreApi.readNamespacedService({ name: serviceName, namespace })
-    const ep = await client.coreApi.readNamespacedEndpoints({ name: serviceName, namespace }).catch(() => null)
+    const slices = await client.discoveryApi
+      .listNamespacedEndpointSlice({ namespace, labelSelector: `kubernetes.io/service-name=${serviceName}` })
+      .catch(() => ({ items: [] }))
 
-    const readyAddresses = ep?.subsets?.flatMap((s) => s.addresses?.map((a) => a.ip) ?? []) ?? []
-    const notReadyAddresses = ep?.subsets?.flatMap((s) => s.notReadyAddresses?.map((a) => a.ip) ?? []) ?? []
+    const readyAddresses: string[] = []
+    const notReadyAddresses: string[] = []
+    for (const slice of (slices as any).items) {
+      for (const ep of slice.endpoints ?? []) {
+        const addrs = ep.addresses ?? []
+        if (ep.conditions?.ready) readyAddresses.push(...addrs)
+        else notReadyAddresses.push(...addrs)
+      }
+    }
 
     const pods = cache.getAll(cluster).filter((p) => p.kind === 'Pod' && p.namespace === namespace)
     const selector = svc.spec?.selector ?? {}
@@ -839,129 +832,83 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return { nodes, edges }
   })
 
-  ipcMain.handle('k8s:get-cost-estimates', async (_event, cluster: string) => {
-    const client = getClient(cluster)
-    if (!client) throw new Error(`Not connected to ${cluster}`)
-
-    const pods = await client.coreApi.listPodForAllNamespaces()
-    const byNs = new Map<string, { cpu: number; mem: number; pods: number }>()
-
-    for (const pod of pods.items) {
-      const ns = pod.metadata?.namespace ?? ''
-      const entry = byNs.get(ns) ?? { cpu: 0, mem: 0, pods: 0 }
-      entry.pods++
-
-      for (const c of pod.spec?.containers ?? []) {
-        const cpuReq = c.resources?.requests?.cpu ?? c.resources?.limits?.cpu ?? ''
-        const memReq = c.resources?.requests?.memory ?? c.resources?.limits?.memory ?? ''
-        entry.cpu += parseCpu(cpuReq)
-        entry.mem += parseMem(memReq)
-      }
-
-      byNs.set(ns, entry)
-    }
-
-    return [...byNs.entries()].map(([namespace, data]) => ({
-      namespace,
-      cpuCores: Math.round(data.cpu * 100) / 100,
-      memoryGB: Math.round(data.mem * 100) / 100,
-      monthlyCost: Math.round((data.cpu * 12 + data.mem * 6) * 100) / 100,
-      pods: data.pods
-    })).sort((a, b) => b.monthlyCost - a.monthlyCost)
-  })
-
-  ipcMain.handle('k8s:get-helm-releases', async (_event, cluster: string) => {
-    const client = getClient(cluster)
-    if (!client) throw new Error(`Not connected to ${cluster}`)
-
-    const secrets = await client.coreApi.listSecretForAllNamespaces()
-    const helmSecrets = secrets.items.filter((s) => s.type === 'helm.sh/release.v1')
-
-    const releases = new Map<string, any>()
-    for (const s of helmSecrets) {
-      const name = s.metadata?.labels?.name ?? ''
-      const revision = parseInt(s.metadata?.labels?.version ?? '0')
-      const existing = releases.get(name)
-      if (!existing || revision > existing.revision) {
-        releases.set(name, {
-          name,
-          namespace: s.metadata?.namespace ?? '',
-          chart: s.metadata?.labels?.name ?? '',
-          version: s.metadata?.labels?.version ?? '',
-          revision,
-          status: s.metadata?.labels?.status ?? 'unknown',
-          updated: s.metadata?.creationTimestamp?.toISOString() ?? ''
-        })
-      }
-    }
-
-    return [...releases.values()].sort((a, b) => a.name.localeCompare(b.name))
-  })
-
   ipcMain.handle('k8s:get-sizing-recs', async (_event, cluster: string, namespace: string) => {
     const client = getClient(cluster)
     if (!client) throw new Error(`Not connected to ${cluster}`)
 
     const pods = await client.coreApi.listNamespacedPod({ namespace })
-    const recs: any[] = []
 
-    for (const pod of pods.items) {
-      for (const c of pod.spec?.containers ?? []) {
-        const cpuReq = c.resources?.requests?.cpu ?? ''
-        const memReq = c.resources?.requests?.memory ?? ''
-
-        if (cpuReq || memReq) {
-          recs.push({
-            pod: pod.metadata?.name ?? '',
-            namespace: pod.metadata?.namespace ?? '',
-            container: c.name,
-            cpuRequest: cpuReq || 'none',
-            cpuActual: 'n/a',
-            memRequest: memReq || 'none',
-            memActual: 'n/a',
-            cpuSaving: cpuReq ? 'check metrics' : '',
-            memSaving: memReq ? 'check metrics' : ''
+    const usage = new Map<string, { cpu: number; mem: number }>()
+    try {
+      const metricsClient = new k8s.Metrics(getKubeConfig(cluster))
+      const podMetrics = await metricsClient.getPodMetrics(namespace)
+      for (const pm of podMetrics.items) {
+        for (const c of pm.containers ?? []) {
+          usage.set(`${pm.metadata?.name}/${c.name}`, {
+            cpu: parseCpu(c.usage?.cpu ?? '0'),
+            mem: parseMem(c.usage?.memory ?? '0')
           })
         }
       }
+    } catch {
+      return { metricsAvailable: false, recs: [] }
     }
 
-    return recs
+    const recs: any[] = []
+    for (const pod of pods.items) {
+      for (const c of pod.spec?.containers ?? []) {
+        const cpuReq = parseCpu(c.resources?.requests?.cpu ?? '')
+        const memReq = parseMem(c.resources?.requests?.memory ?? '')
+        const actual = usage.get(`${pod.metadata?.name}/${c.name}`)
+        if (!actual) continue
+
+        const cpuPct = cpuReq > 0 ? Math.round((actual.cpu / cpuReq) * 100) : -1
+        const memPct = memReq > 0 ? Math.round((actual.mem / memReq) * 100) : -1
+        const overProvisioned = (cpuPct >= 0 && cpuPct < 30) || (memPct >= 0 && memPct < 30)
+        const tight = cpuPct > 90 || memPct > 90
+
+        recs.push({
+          pod: pod.metadata?.name ?? '',
+          namespace: pod.metadata?.namespace ?? '',
+          container: c.name,
+          cpuRequest: c.resources?.requests?.cpu ?? 'none',
+          cpuActual: `${Math.round(actual.cpu * 1000)}m`,
+          cpuPct,
+          memRequest: c.resources?.requests?.memory ?? 'none',
+          memActual: `${Math.round(actual.mem * 1024)}Mi`,
+          memPct,
+          flag: tight ? 'tight' : overProvisioned ? 'over' : 'ok'
+        })
+      }
+    }
+
+    recs.sort((a, b) => {
+      const order = { over: 0, tight: 1, ok: 2 } as Record<string, number>
+      return order[a.flag] - order[b.flag]
+    })
+    return { metricsAvailable: true, recs }
   })
 
   ipcMain.handle('k8s:trace-request', async (_event, cluster: string, host: string) => {
     const client = getClient(cluster)
     if (!client) throw new Error(`Not connected to ${cluster}`)
 
-    const hops: any[] = []
-    let rootCause: string
-    let suggestion: string
+    const nodes: any[] = []
+    const edges: any[] = []
+    const add = (n: any) => { nodes.push(n); return n.id }
+    const link = (from: string, to: string) => edges.push({ from, to })
 
-    // 1. Find ingress matching host
     const ingresses = await client.networkApi.listIngressForAllNamespaces().catch(() => ({ items: [] }))
     let matchedIngress: any = null
-    let matchedService = ''
-    let matchedNamespace = ''
+    let ns = ''
+    let matchedRule: any = null
 
     for (const ing of (ingresses as any).items) {
       for (const rule of ing.spec?.rules ?? []) {
         if (rule.host === host || host === '*') {
           matchedIngress = ing
-          matchedNamespace = ing.metadata?.namespace ?? ''
-          const firstPath = rule.http?.paths?.[0]
-          matchedService = firstPath?.backend?.service?.name ?? ''
-
-          const ingressClass = ing.spec?.ingressClassName ?? ing.metadata?.annotations?.['kubernetes.io/ingress.class'] ?? 'unknown'
-          const tls = ing.spec?.tls?.some((t: any) => t.hosts?.includes(rule.host))
-          const paths = (rule.http?.paths ?? []).map((p: any) => `${p.path ?? '/'} -> ${p.backend?.service?.name}`).join(', ')
-
-          hops.push({
-            name: ing.metadata?.name,
-            kind: 'Ingress',
-            status: 'ok',
-            detail: `class: ${ingressClass}, tls: ${tls ? 'yes' : 'no'}, routes: ${paths}`,
-            issues: []
-          })
+          matchedRule = rule
+          ns = ing.metadata?.namespace ?? ''
           break
         }
       }
@@ -969,138 +916,192 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
 
     if (!matchedIngress) {
-      hops.push({ name: host, kind: 'Ingress', status: 'error', detail: 'No ingress rule found for this host', issues: ['No matching ingress'] })
-      rootCause = `No ingress rule matches host "${host}"`
-      suggestion = 'Create an ingress resource with a rule for this hostname, or check for typos in the host.'
-      return { url: host, hops, rootCause, suggestion }
+      add({ id: 'host', kind: 'Host', label: host, status: 'error', issues: ['No ingress rule matches this host'] })
+      return {
+        url: host,
+        nodes,
+        edges,
+        rootCause: `No ingress rule matches host "${host}"`,
+        suggestion: 'Create an ingress with a rule for this hostname, or check for typos.'
+      }
     }
 
-    // 2. Check LoadBalancer
-    const lbIp = matchedIngress.status?.loadBalancer?.ingress?.[0]?.ip ?? matchedIngress.status?.loadBalancer?.ingress?.[0]?.hostname ?? ''
+    const tls = matchedIngress.spec?.tls?.some((t: any) => t.hosts?.includes(host))
+    const ingressClass =
+      matchedIngress.spec?.ingressClassName ??
+      matchedIngress.metadata?.annotations?.['kubernetes.io/ingress.class'] ??
+      'unknown'
+    const hostId = add({
+      id: 'host',
+      kind: 'Host',
+      label: host,
+      sublabel: `${matchedIngress.metadata?.name} · ${ingressClass} · ${tls ? 'TLS' : 'no TLS'}`,
+      status: 'ok',
+      issues: []
+    })
+
+    const lbIp =
+      matchedIngress.status?.loadBalancer?.ingress?.[0]?.ip ??
+      matchedIngress.status?.loadBalancer?.ingress?.[0]?.hostname ??
+      ''
+    let entryId = hostId
     if (lbIp) {
-      hops.push({ name: lbIp, kind: 'LoadBalancer', status: 'ok', detail: `External: ${lbIp}`, issues: [] })
+      const lbId = add({ id: 'lb', kind: 'LoadBalancer', label: lbIp, sublabel: 'external', status: 'ok', issues: [] })
+      link(hostId, lbId)
+      entryId = lbId
     }
 
-    // 3. Check service
-    if (!matchedService) {
-      hops.push({ name: '?', kind: 'Service', status: 'error', detail: 'No backend service in ingress rule', issues: ['Missing backend'] })
-      rootCause = 'Ingress rule has no backend service configured'
-      suggestion = 'Add a backend service to the ingress rule.'
-      return { url: host, hops, rootCause, suggestion }
+    const pods = await client.coreApi.listNamespacedPod({ namespace: ns }).catch(() => ({ items: [] }))
+
+    let worstSummary = ''
+    let worstSuggestion = ''
+    let worstRank = -1
+    const rank = (s: string) => (s === 'error' ? 2 : s === 'warning' ? 1 : 0)
+    const consider = (status: string, summary: string, suggestion: string) => {
+      if (rank(status) > worstRank) {
+        worstRank = rank(status)
+        worstSummary = summary
+        worstSuggestion = suggestion
+      }
     }
 
-    let svc: any
-    try {
-      svc = await client.coreApi.readNamespacedService({ name: matchedService, namespace: matchedNamespace })
-      const svcType = svc.spec?.type ?? 'ClusterIP'
+    const paths = matchedRule.http?.paths ?? []
+    let pi = 0
+    for (const path of paths) {
+      pi++
+      const svcName = path.backend?.service?.name ?? ''
+      const pathStr = path.path ?? '/'
+      const pathId = add({ id: `path-${pi}`, kind: 'Path', label: pathStr, sublabel: svcName, status: 'ok', issues: [] })
+      link(entryId, pathId)
+
+      if (!svcName) {
+        nodes[nodes.length - 1].status = 'error'
+        nodes[nodes.length - 1].issues = ['No backend service']
+        consider('error', `Path ${pathStr} has no backend service`, 'Fix the ingress backend reference.')
+        continue
+      }
+
+      let svc: any = null
+      try {
+        svc = await client.coreApi.readNamespacedService({ name: svcName, namespace: ns })
+      } catch {}
+
+      if (!svc) {
+        const sId = add({ id: `svc-${pi}`, kind: 'Service', label: svcName, status: 'error', issues: ['Service not found'] })
+        link(pathId, sId)
+        consider('error', `Service "${svcName}" does not exist`, 'Create the service or fix the ingress backend.')
+        continue
+      }
+
       const ports = (svc.spec?.ports ?? []).map((p: any) => `${p.port}/${p.protocol ?? 'TCP'}`).join(', ')
-      hops.push({ name: matchedService, kind: 'Service', status: 'ok', detail: `${svcType}, ports: ${ports}`, issues: [] })
-    } catch {
-      hops.push({ name: matchedService, kind: 'Service', status: 'error', detail: 'Service not found', issues: [`Service "${matchedService}" does not exist`] })
-      rootCause = `Service "${matchedService}" referenced by ingress does not exist`
-      suggestion = 'Create the service or fix the ingress backend reference.'
-      return { url: host, hops, rootCause, suggestion }
-    }
+      const svcId = add({
+        id: `svc-${pi}`,
+        kind: 'Service',
+        label: svcName,
+        sublabel: `${svc.spec?.type ?? 'ClusterIP'} · ${ports}`,
+        status: 'ok',
+        issues: []
+      })
+      link(pathId, svcId)
 
-    // 4. Check endpoints
-    let ep: any
-    try {
-      ep = await client.coreApi.readNamespacedEndpoints({ name: matchedService, namespace: matchedNamespace })
-    } catch {}
-
-    const readyAddresses = ep?.subsets?.flatMap((s: any) => s.addresses ?? []) ?? []
-    const notReadyAddresses = ep?.subsets?.flatMap((s: any) => s.notReadyAddresses ?? []) ?? []
-    const epIssues: string[] = []
-
-    if (readyAddresses.length === 0 && notReadyAddresses.length === 0) {
-      epIssues.push('No endpoints at all — service selector matches zero pods')
-    } else if (readyAddresses.length === 0) {
-      epIssues.push(`0 ready, ${notReadyAddresses.length} not ready — all backends are failing readiness`)
-    }
-
-    hops.push({
-      name: 'Endpoints',
-      kind: 'Endpoints',
-      status: readyAddresses.length > 0 ? 'ok' : 'error',
-      detail: `${readyAddresses.length} ready, ${notReadyAddresses.length} not ready`,
-      issues: epIssues
-    })
-
-    if (readyAddresses.length === 0 && notReadyAddresses.length === 0) {
-      const selector = svc.spec?.selector ?? {}
-      rootCause = `Service selector ${JSON.stringify(selector)} matches zero pods`
-      suggestion = 'Check that pods exist with labels matching the service selector. The deployment may have been scaled to 0 or deleted.'
-      return { url: host, hops, rootCause, suggestion }
-    }
-
-    // 5. Check backend pods
-    const selector = svc.spec?.selector ?? {}
-    const allPods = await client.coreApi.listNamespacedPod({ namespace: matchedNamespace })
-    const matchingPods = allPods.items.filter((p: any) => {
-      const labels = p.metadata?.labels ?? {}
-      return Object.entries(selector).every(([k, v]) => labels[k] === v)
-    })
-
-    const podIssues: string[] = []
-    let crashingCount = 0
-    let notReadyCount = 0
-
-    for (const pod of matchingPods) {
-      const ready = pod.status?.conditions?.find((c: any) => c.type === 'Ready')
-      if (ready?.status !== 'True') notReadyCount++
-
-      for (const cs of pod.status?.containerStatuses ?? []) {
-        if (cs.state?.waiting?.reason === 'CrashLoopBackOff') {
-          crashingCount++
-          const lastReason = cs.lastState?.terminated?.reason ?? ''
-          podIssues.push(`${pod.metadata?.name}: CrashLoopBackOff${lastReason ? ` (${lastReason})` : ''}`)
-        } else if (cs.state?.waiting?.reason === 'ImagePullBackOff') {
-          podIssues.push(`${pod.metadata?.name}: ImagePullBackOff — ${cs.image}`)
-        } else if (cs.state?.terminated) {
-          podIssues.push(`${pod.metadata?.name}: terminated (exit ${cs.state.terminated.exitCode})`)
+      // EndpointSlice (discovery.k8s.io/v1) keyed by service name label
+      let ready = 0
+      let notReady = 0
+      const slices = await client.discoveryApi
+        .listNamespacedEndpointSlice({ namespace: ns, labelSelector: `kubernetes.io/service-name=${svcName}` })
+        .catch(() => ({ items: [] }))
+      for (const slice of (slices as any).items) {
+        for (const ep of slice.endpoints ?? []) {
+          const count = ep.addresses?.length ?? 1
+          if (ep.conditions?.ready) ready += count
+          else notReady += count
         }
       }
-    }
 
-    if (matchingPods.length === 0) {
-      podIssues.push('No pods match service selector')
-    }
+      const epStatus = ready > 0 ? (notReady > 0 ? 'warning' : 'ok') : 'error'
+      const epIssues: string[] = []
+      if (ready === 0 && notReady === 0) epIssues.push('No endpoints — selector matches zero pods')
+      else if (ready === 0) epIssues.push(`0 ready, ${notReady} not ready`)
+      const epId = add({
+        id: `ep-${pi}`,
+        kind: 'Endpoints',
+        label: `${ready} ready`,
+        sublabel: notReady > 0 ? `${notReady} not ready` : '',
+        status: epStatus,
+        issues: epIssues
+      })
+      link(svcId, epId)
 
-    hops.push({
-      name: `Pods (${matchingPods.length})`,
-      kind: 'Pod',
-      status: podIssues.length > 0 ? 'error' : notReadyCount > 0 ? 'warning' : 'ok',
-      detail: `${matchingPods.length} total, ${matchingPods.length - notReadyCount} ready, ${crashingCount} crashing`,
-      issues: podIssues.slice(0, 5)
-    })
+      const selector = svc.spec?.selector ?? {}
+      const matching = (pods as any).items.filter((p: any) => {
+        const labels = p.metadata?.labels ?? {}
+        return Object.keys(selector).length > 0 && Object.entries(selector).every(([k, v]) => labels[k] === v)
+      })
 
-    // Determine root cause
-    if (readyAddresses.length === 0 && crashingCount > 0) {
-      const lastCrash = podIssues[0] ?? ''
-      if (lastCrash.includes('OOMKilled')) {
-        rootCause = '503: All pods are OOM killed. Zero ready endpoints.'
-        suggestion = 'Increase memory limits for the containers in this deployment.'
-      } else if (lastCrash.includes('ImagePullBackOff')) {
-        rootCause = '503: Pods cannot pull their container image. Zero ready endpoints.'
-        suggestion = 'Check the image name/tag and registry credentials.'
-      } else {
-        rootCause = '503: All pods are crash-looping. Zero ready endpoints.'
-        suggestion = 'Check pod logs for the crash reason. Fix the application error, then the endpoints will recover.'
+      if (matching.length === 0) {
+        const pid = add({ id: `pods-${pi}`, kind: 'Pod', label: 'no pods', status: 'error', issues: ['Selector matches no pods'] })
+        link(epId, pid)
+        consider('error', `${svcName}: selector matches zero pods`, 'Deployment may be scaled to 0 or the selector is wrong.')
+        continue
       }
-    } else if (readyAddresses.length === 0 && notReadyCount > 0) {
-      rootCause = '503: All pods are failing readiness probes. Zero ready endpoints.'
-      suggestion = 'Check the readiness probe configuration. The app may not be listening on the expected port/path.'
-    } else if (readyAddresses.length === 0) {
-      rootCause = '503: No pods match the service selector.'
-      suggestion = 'Deploy pods with labels matching the service selector, or fix the selector.'
-    } else if (notReadyCount > 0) {
-      rootCause = `Degraded: ${notReadyCount}/${matchingPods.length} pods not ready. Service is partially available.`
-      suggestion = 'Some pods are unhealthy. Check their logs and events.'
-    } else {
-      rootCause = 'All hops look healthy. If you are still seeing errors, check application-level issues (database connectivity, upstream dependencies).'
-      suggestion = 'The infrastructure path is clean. The issue is likely inside the application.'
+
+      for (const pod of matching.slice(0, 6)) {
+        const isReady = pod.status?.conditions?.find((c: any) => c.type === 'Ready')?.status === 'True'
+        const podIssues: string[] = []
+        let podStatus: string = isReady ? 'ok' : 'warning'
+        for (const cs of pod.status?.containerStatuses ?? []) {
+          const reason = cs.state?.waiting?.reason
+          if (reason === 'CrashLoopBackOff') {
+            podStatus = 'error'
+            const last = cs.lastState?.terminated?.reason ?? ''
+            podIssues.push(`CrashLoopBackOff${last ? ` (${last})` : ''}`)
+          } else if (reason === 'ImagePullBackOff' || reason === 'ErrImagePull') {
+            podStatus = 'error'
+            podIssues.push('ImagePullBackOff')
+          } else if (cs.state?.terminated && cs.state.terminated.exitCode !== 0) {
+            podStatus = 'error'
+            podIssues.push(`exited ${cs.state.terminated.exitCode}`)
+          }
+        }
+        const podId = add({
+          id: `pod-${pi}-${pod.metadata?.uid}`,
+          kind: 'Pod',
+          label: pod.metadata?.name ?? '',
+          sublabel: pod.status?.phase ?? '',
+          status: podStatus,
+          issues: podIssues
+        })
+        link(epId, podId)
+      }
+
+      const crashing = matching.some((p: any) =>
+        p.status?.containerStatuses?.some((cs: any) =>
+          ['CrashLoopBackOff', 'ImagePullBackOff', 'ErrImagePull'].includes(cs.state?.waiting?.reason)
+        )
+      )
+      if (ready === 0 && crashing) {
+        const oom = matching.some((p: any) =>
+          p.status?.containerStatuses?.some((cs: any) => cs.lastState?.terminated?.reason === 'OOMKilled')
+        )
+        consider(
+          'error',
+          oom
+            ? `503 on ${pathStr}: pods OOM killed, 0 ready endpoints`
+            : `503 on ${pathStr}: pods crash-looping, 0 ready endpoints`,
+          oom ? 'Increase memory limits.' : 'Check pod logs for the crash reason.'
+        )
+      } else if (ready === 0) {
+        consider('error', `503 on ${pathStr}: 0 ready endpoints (readiness failing)`, 'Check readiness probe config and the port the app listens on.')
+      } else if (notReady > 0) {
+        consider('warning', `${pathStr}: ${notReady} backend(s) not ready, partially degraded`, 'Some pods are unhealthy; check their logs.')
+      }
     }
 
-    return { url: host, hops, rootCause, suggestion }
+    if (worstRank <= 0) {
+      worstSummary = 'All paths healthy. Traffic reaches ready pods at every hop.'
+      worstSuggestion = 'If you still see errors, the cause is inside the app (DB, upstream deps), not the routing path.'
+    }
+
+    return { url: host, nodes, edges, rootCause: worstSummary, suggestion: worstSuggestion }
   })
 }

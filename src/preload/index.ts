@@ -26,7 +26,6 @@ const api: HorusAPI = {
   getRollout: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-rollout', cluster, namespace, name),
   getNodes: (cluster) => ipcRenderer.invoke('k8s:get-nodes', cluster),
   getCronJobRuns: (cluster, namespace, name) => ipcRenderer.invoke('k8s:get-cronjob-runs', cluster, namespace, name),
-  getResourceYaml: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:get-resource-yaml', cluster, namespace, name, kind),
   getTrafficPath: (cluster, namespace, serviceName) => ipcRenderer.invoke('k8s:get-traffic-path', cluster, namespace, serviceName),
   getHPAs: (cluster, namespace) => ipcRenderer.invoke('k8s:get-hpas', cluster, namespace),
   getPVCs: (cluster, namespace) => ipcRenderer.invoke('k8s:get-pvcs', cluster, namespace),
@@ -44,8 +43,6 @@ const api: HorusAPI = {
   traceRequest: (cluster, host) => ipcRenderer.invoke('k8s:trace-request', cluster, host),
   analyzeRootCause: (cluster, namespace, name, kind) => ipcRenderer.invoke('k8s:analyze-root-cause', cluster, namespace, name, kind),
   getTopology: (cluster, namespace) => ipcRenderer.invoke('k8s:get-topology', cluster, namespace),
-  getCostEstimates: (cluster) => ipcRenderer.invoke('k8s:get-cost-estimates', cluster),
-  getHelmReleases: (cluster) => ipcRenderer.invoke('k8s:get-helm-releases', cluster),
   getSizingRecs: (cluster, namespace) => ipcRenderer.invoke('k8s:get-sizing-recs', cluster, namespace),
   onLogChunk: (callback) => {
     const handler = (_event: any, chunk: any) => callback(chunk)
