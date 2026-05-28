@@ -30,16 +30,20 @@ export function DiffView({ clusters, resources, onBack }: DiffViewProps) {
     setLeftYaml(null)
     setRightYaml(null)
 
-    try {
-      const [left, right] = await Promise.all([
-        k8s.getResourceYaml(leftCluster, selectedNs, selectedResource, selectedKind),
-        k8s.getResourceYaml(rightCluster, selectedNs, selectedResource, selectedKind)
-      ])
-      setLeftYaml(left)
-      setRightYaml(right)
-    } catch (err: any) {
-      setError(err.message)
+    const [left, right] = await Promise.all([
+      k8s.getResourceYaml(leftCluster, selectedNs, selectedResource, selectedKind).catch(() => null),
+      k8s.getResourceYaml(rightCluster, selectedNs, selectedResource, selectedKind).catch(() => null)
+    ])
+
+    if (!left && !right) {
+      setError(`${selectedKind} "${selectedResource}" not found in either cluster.`)
+    } else if (!left) {
+      setError(`${selectedKind} "${selectedResource}" exists in ${rightCluster} but not in ${leftCluster}.`)
+    } else if (!right) {
+      setError(`${selectedKind} "${selectedResource}" exists in ${leftCluster} but not in ${rightCluster}.`)
     }
+    setLeftYaml(left ?? '(not found in this cluster)')
+    setRightYaml(right ?? '(not found in this cluster)')
     setLoading(false)
   }
 
