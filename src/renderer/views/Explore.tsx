@@ -8,11 +8,8 @@ import { PVCList } from '../components/PVCList'
 import { QuotaView } from '../components/QuotaView'
 import { ConfigChecks } from '../components/ConfigChecks'
 import { TopologyMap } from '../components/TopologyMap'
-import { HelmReleases } from '../components/HelmReleases'
 import { SizingRecs } from '../components/SizingRecs'
 import { OwnershipTree } from '../components/OwnershipTree'
-import { DependencyGraph } from '../components/DependencyGraph'
-import { NodeTopology } from '../components/NodeTopology'
 import { parseHelmLabels } from '../../shared/helm'
 import type { K8sResource, ResourceKind } from '../../shared/types'
 
@@ -206,7 +203,6 @@ export function Explore({ cluster, resources, onSelectResource, onShowNodes, onS
               <SizingRecs cluster={cluster} namespace={namespace} />
             </div>
             <div>
-              <DependencyGraph cluster={cluster} namespace={namespace} />
               <PVCList cluster={cluster} namespace={namespace} />
               <ConfigChecks cluster={cluster} namespace={namespace} />
             </div>

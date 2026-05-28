@@ -1,5 +1,5 @@
 import { CardSkeleton } from './Skeleton'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, H5, InputGroup } from '@blueprintjs/core'
 import { useK8s } from '../hooks/useK8s'
 import type { TopologyNode, TopologyEdge } from '../../shared/types'

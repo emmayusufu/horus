@@ -3,18 +3,16 @@ import type { PodCondition } from '../../shared/types'
 
 interface PodLifecycleProps {
   conditions: PodCondition[]
-  age: string
 }
 
 const PHASE_ORDER = ['PodScheduled', 'Initialized', 'ContainersReady', 'Ready']
 const PHASE_LABELS: Record<string, string> = { PodScheduled: 'Scheduled', Initialized: 'Init', ContainersReady: 'Containers', Ready: 'Ready' }
 
-export function PodLifecycle({ conditions, age }: PodLifecycleProps) {
+export function PodLifecycle({ conditions }: PodLifecycleProps) {
   if (conditions.length === 0) return null
 
   const condMap = new Map(conditions.map((c) => [c.type, c]))
   const lastTrue = PHASE_ORDER.filter((p) => condMap.get(p)?.status === 'True').length
-  const stuckAt = PHASE_ORDER.find((p) => condMap.get(p)?.status === 'False')
 
   return (
     <Card style={{ marginBottom: 12 }}>

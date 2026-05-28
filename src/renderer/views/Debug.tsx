@@ -130,7 +130,7 @@ export function Debug({ resource, onBack, onNavigate }: DebugProps) {
 
       <div className="debug-columns">
         <div className="debug-sidebar">
-          {detail.conditions && detail.conditions.length > 0 && <PodLifecycle conditions={detail.conditions} age={resource.age} />}
+          {detail.conditions && detail.conditions.length > 0 && <PodLifecycle conditions={detail.conditions} />}
           {detail.conditions && detail.conditions.length > 0 && <PodConditions conditions={detail.conditions} />}
           {detail.containers && detail.containers.length > 0 && <SidecarInfo containers={detail.containers} />}
           {detail.containers && detail.containers.length > 0 && <ContainerStates containers={detail.containers} />}
