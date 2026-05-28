@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, nativeImage } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
@@ -10,6 +10,7 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     title: 'Horus',
+    icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -35,6 +36,9 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    app.dock?.setIcon(nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')))
+  }
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
